@@ -1,4 +1,4 @@
-let val = 100000000
+let val = 0
 let inc = 1
 let mul = 1
 let up1 = 10
