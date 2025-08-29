@@ -1,0 +1,48 @@
+body{
+    background-color: rgb(58, 58, 58);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    
+}
+
+.conteiner{
+
+    margin-left: 35%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 17px;
+    width:400px ;
+    height:700px ;
+
+}
+.quadrado{
+    height: 150px;
+    width: 170px;
+    margin-left: 37%;
+    color: aliceblue;
+}
+button{
+    width: 150px;
+    height: 30px;
+    margin-left: 39.5%;
+    border-radius: 9px;
+    background-color: rgb(36, 36, 36);
+    color: aliceblue;
+}
+.medidor{
+    margin-left: 17%;
+    color: aliceblue;
+
+}
+.mediclik{
+    margin-left: 17%;
+    height: 0px;
+    padding-top: 0px;
+    color:aliceblue;
+}
+h4{
+    margin-top:-7px;
+    color: aliceblue;
+}
