@@ -1,4 +1,4 @@
-let val = 0
+let val = 9999999999999999999999999999
 let inc = 1
 let mul = 1
 let up1 = 10
@@ -9,10 +9,10 @@ let up5 = 100000
 let up6 = 1000000
 let mu1 = 50000
 let mu2 = 2000000
+let verif = 0
 
 let fim = inc*mul
 
-setInterval(atl(),1)
 function abreviar(num){
 if (num>=1000000000000000){
     return (num / 1000000000000000).toFixed(1).replace(/\.0$/, "") + "Q";
@@ -36,6 +36,7 @@ else if (num<1000){
 
 function din() {
 val = val+(inc*mul)
+verif = 1
 }
 
 function upg1(){
@@ -119,7 +120,6 @@ function multi2(){
 
 function atl() {
     document.getElementById("medidor").textContent = abreviar(val);
-    document.getElementById("medicli").textContent = "Poder do click: " + (inc * mul);
     document.getElementById("up1").textContent = "Upgrade 1: " + abreviar(up1);
     document.getElementById("up2").textContent = "Upgrade 2: " + abreviar(up2);
     document.getElementById("up3").textContent = "Upgrade 3: " + abreviar(up3);
@@ -128,6 +128,9 @@ function atl() {
     document.getElementById("up6").textContent = "Upgrade 6: " + abreviar(up6);
     document.getElementById("mult1").textContent = "Multiplicador 1: " + abreviar(mu1);
     document.getElementById("mult2").textContent = "Multiplicador 2: " + abreviar(mu2);
+    if(verif==1){
+    document.getElementById("quadr").textContent = inc*mul
+    }
 }
 
 setInterval(atl,100)
