@@ -129,7 +129,8 @@ function atl() {
     document.getElementById("mult1").textContent = "Multiplicador 1: " + abreviar(mu1);
     document.getElementById("mult2").textContent = "Multiplicador 2: " + abreviar(mu2);
     if(verif==1){
-    document.getElementById("quadr").textContent = inc*mul
+    document.getElementById("quadr").textContent = abreviar(inc*mul)
+    
     }
 }
 
