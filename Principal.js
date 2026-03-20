@@ -56,7 +56,7 @@ function upgrade(index){
     if (estatisticas.val >= upgr.custo) {
     estatisticas.val -= upgr.custo;
     estatisticas.inc += upgr.ganho;
-    upgr = Math.ceil(upgr.custo * upgr.multiplicador);
+    upgr.custo = Math.ceil(upgr.custo * upgr.multiplicador);
     }
     salvarNoNavegador()
 }
@@ -74,8 +74,7 @@ function multiplicador(index){
 
 
 
-    function atl(){
-
+function atl(){
     document.getElementById("medidor").textContent = abreviar(estatisticas.val);
     document.getElementById("up1").textContent = "Upgrade 1: " + abreviar(estatisticas.upgrades[0].custo);
     document.getElementById("up2").textContent = "Upgrade 2: " + abreviar(estatisticas.upgrades[1].custo);
