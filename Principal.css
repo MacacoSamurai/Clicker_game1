@@ -71,3 +71,27 @@ h4 {
     margin-top: -7px;
     color: aliceblue;
 }
+
+/* Botão de reset corrigido */
+#reset {
+    background-color: transparent;
+    color: rgb(200, 200, 200);
+    font-size: 0.9rem;
+    padding: 8px 20px;
+    margin: 50px auto 20px auto; /* Margem de 50px no topo e centralizado horizontalmente */
+    border: 1px solid rgb(100, 100, 100);
+    opacity: 0.7;
+    border-radius: 5px;
+    cursor: pointer;
+    
+    /* As duas linhas abaixo impedem que ele estique */
+    width: auto;             /* Cancela o width: 60% global */
+    max-width: fit-content;  /* Garante que ele só ocupe o espaço do texto */
+    display: block;          /* Necessário para o 'margin: auto' funcionar */
+}
+
+#reset:hover {
+    opacity: 1;
+    border-color: rgb(150, 150, 150);
+    background-color: rgba(255, 1, 1, 0.979); /* Leve destaque ao passar o mouse */
+}
