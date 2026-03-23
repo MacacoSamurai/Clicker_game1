@@ -95,3 +95,43 @@ h4 {
     border-color: rgb(150, 150, 150);
     background-color: rgba(255, 1, 1, 0.979); /* Leve destaque ao passar o mouse */
 }
+
+/* Nova classe para controlar o layout dos botões */
+.grid-botoes {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* Cria 2 colunas de tamanhos iguais */
+    gap: 10px;                      /* Espaço entre os botões */
+    width: 100%;
+}
+
+/* Ajuste nos botões para que eles não forcem o 60% dentro do grid */
+.grid-botoes button {
+    width: 100%; /* Dentro do grid, eles devem preencher a coluna */
+    font-size: 0.85rem; /* Diminuir um pouco a fonte para caber lado a lado */
+    padding: 12px 5px;
+}
+
+/* Mantém os outros botões (quadrado e mult) centralizados e com o tamanho antigo */
+.quadrado, #mult1, #mult2 {
+    width: 80%; 
+    align-self: center;
+}
+
+.grid-botoes {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* Duas colunas iguais */
+    gap: 10px;
+    width: 100%;
+}
+
+/* Esta regra faz o botão ocupar 2 colunas de largura */
+.botao-largo {
+    grid-column: span 2; 
+    width: 100% !important; /* Garante que preencha todo o espaço */
+    margin-top: 5px;       /* Opcional: um pequeno espaço extra antes dos multis */
+}
+
+/* Ajuste para os botões normais (up e auto) não ficarem gigantes no PC */
+.grid-botoes button:not(.botao-largo) {
+    width: 100%;
+}

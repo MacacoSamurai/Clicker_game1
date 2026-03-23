@@ -1,40 +1,51 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-br">
 <head>
-<title>Quadrado clicker</title>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="stylesheet" href="Principal.css">
-<script src="Principal.js" defer></script>
-<link rel="shortcut icon" type="image/x-icon" href="icon.jpg">
+    <title>Quadrado Clicker</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="Principal.css">
+    <script src="Principal.js" defer></script>
+    <link rel="shortcut icon" type="image/x-icon" href="icon.jpg">
 </head>
-
-
 
 <body>
     <div class="conteiner">
-        <div class="medidor"><h1 id="medidor">0</h1></div>
+        <div class="medidor">
+            <h1 id="medidor">0</h1>
+        </div>
+
         <button class="quadrado" id="quadr" onclick="din()">clique aqui</button>
-        <button id="up1"  onclick="upgrade(0)" ></button>
-        <button id="up2"  onclick="upgrade(1)" ></button>
-        <button id="up3"  onclick="upgrade(2)" ></button>
-        <button id="up4"  onclick="upgrade(3)" ></button>
-        <button id="up5"  onclick="upgrade(4)" ></button>
-        <button id="up6"  onclick="upgrade(5)" ></button>
-        <button id="mult1"  onclick="multiplicador(0)"></button>
-        <button id="mult2"  onclick="multiplicador(1)"></button>
+
+            <h4 id="vps">Valor por segundo: 0</h4>
+
+        <div class="grid-botoes">
+            <button id="up1" onclick="upgrade(0)"></button>
+            <button id="aut1" onclick="automatizar(0)"></button>
+            
+            <button id="up2" onclick="upgrade(1)"></button>
+            <button id="aut2" onclick="automatizar(1)"></button>
+            
+            <button id="up3" onclick="upgrade(2)"></button>
+            <button id="aut3" onclick="automatizar(2)"></button>
+            
+            <button id="up4" onclick="upgrade(3)"></button>
+            <button id="aut4" onclick="automatizar(3)"></button>
+            
+            <button id="up5" onclick="upgrade(4)"></button>
+            <button id="aut5" onclick="automatizar(4)"></button>
+            
+            <button id="up6" onclick="upgrade(5)"></button>
+            <button id="aut6" onclick="automatizar(5)"></button>
+
+            <button id="mult1" class="botao-largo" onclick="multiplicador(0)"></button>
+            <button id="mult2" class="botao-largo" onclick="multiplicador(1)"></button>
+        </div>
     </div>
 
-<div style="display: flex; justify-content: center; width: 100%;">
-    <button id="reset" onclick="reset()">RESET PROGRESSO</button>
-</div>
-
-
-
-
-
-
+    <div style="display: flex; justify-content: center; width: 100%;">
+        <button id="reset" onclick="reset()">RESET PROGRESSO</button>
+    </div>
 
 </body>
-
 </html>
