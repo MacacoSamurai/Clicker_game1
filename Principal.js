@@ -30,7 +30,7 @@ let contadorSave = 0;
 
 // 1. Ganho Passivo (Roda a cada 0.1s para ser fluido)
 function ocioso() {
-    estatisticas.val += (estatisticas.auto / 10);
+    estatisticas.val += (estatisticas.auto*estatisticas.mul) / 10;
 }
 setInterval(ocioso, 100);
 
@@ -82,7 +82,7 @@ function atl() {
     
     const vpsElemento = document.getElementById("vps");
     if (vpsElemento) {
-        vpsElemento.textContent = "Valor por segundo: " + abreviar(Math.floor(estatisticas.auto));
+        vpsElemento.textContent = "Valor por segundo: " + abreviar(Math.floor(estatisticas.auto*estatisticas.mul));
     }
 
     // 2. ATUALIZAÇÃO DO BOTÃO PRINCIPAL (CLIQUE)
