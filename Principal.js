@@ -1,8 +1,10 @@
 let estatisticas = {
+    nome: "",
     val: 0,
     inc: 1,
     mul: 1,
-    auto: 0, // Ganho passivo total por segundo
+    auto: 0, 
+
     upgrades: [
         {id:"up1", custo: 10, ganho: 1, multiplicador: 1.3},
         {id:"up2", custo: 100, ganho: 10, multiplicador: 1.3},
@@ -30,6 +32,7 @@ let contadorSave = 0;
 
 // 1. Ganho Passivo (Roda a cada 0.1s para ser fluido)
 function ocioso() {
+    estatisticas.val += ((estatisticas.auto*estatisticas.mul) / 10);
     estatisticas.val += (estatisticas.auto*estatisticas.mul) / 10;
 }
 setInterval(ocioso, 100);
@@ -155,6 +158,38 @@ function carregarDoNavegador() {
     const saveData = localStorage.getItem("save_clicker_game");
     if (saveData) {
         Object.assign(estatisticas, JSON.parse(saveData));
+    }
+}
+function iniciarJogo() {
+    const nick = document.getElementById("nick-input").value;
+
+    if (nick.trim().length < 3) {
+        alert("O nome precisa de pelo menos 3 letras!");
+        return;
+    }
+
+    estatisticas.nome = nick;
+    mostrarTelaJogo();
+    salvarNoNavegador();
+}
+
+function mostrarTelaJogo() {
+    document.getElementById("tela-login").style.display = "none";
+    document.getElementById("tela-jogo").style.display = "flex";
+    document.getElementById("area-reset").style.display = "flex";
+    document.getElementById("exibir-nick").textContent = `Jogador: ${estatisticas.nome}`;
+}
+
+// AJUSTE NA FUNÇÃO carregarDoNavegador:
+function carregarDoNavegador() {
+    const saveData = localStorage.getItem("save_clicker_game");
+    if (saveData) {
+        Object.assign(estatisticas, JSON.parse(saveData));
+        
+        // Se já tem um nome salvo, pula direto para o jogo
+        if (estatisticas.nome && estatisticas.nome !== "") {
+            mostrarTelaJogo();
+        }
     }
 }
 carregarDoNavegador();

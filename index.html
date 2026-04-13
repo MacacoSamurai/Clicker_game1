@@ -3,7 +3,6 @@
 <head>
     <title>Quadrado Clicker</title>
     <meta charset="utf-8">
-    <meta name="Um jogo Clicker"
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="Principal.css">
     <script src="Principal.js" defer></script>
@@ -11,42 +10,46 @@
 </head>
 
 <body>
-    <main class="conteiner">
+    <main id="tela-login" class="conteiner">
+        <h1>Quadrado Clicker</h1>
+        <div class="login-box">
+            <p>Escolha seu Nickname:</p>
+            <input type="text" id="nick-input" placeholder="Seu nome aqui...">
+            <button id="btn-iniciar" onclick="iniciarJogo()">COMEÇAR JOGO</button>
+        </div>
+    </main>
+
+    <main class="conteiner" id="tela-jogo">
         <div class="medidor">
+            <h2 id="exibir-nick"></h2>
             <h1 id="medidor">0</h1>
         </div>
 
         <button class="quadrado" id="quadr" onclick="din()">clique aqui</button>
-
-            <h4 id="vps">Valor por segundo: 0</h4>
+        <h4 id="vps">Valor por segundo: 0</h4>
 
         <div class="grid-botoes">
             <button id="up1" onclick="upgrade(0)"></button>
             <button id="aut1" onclick="automatizar(0)"></button>
-            
             <button id="up2" onclick="upgrade(1)"></button>
             <button id="aut2" onclick="automatizar(1)"></button>
-            
             <button id="up3" onclick="upgrade(2)"></button>
             <button id="aut3" onclick="automatizar(2)"></button>
-            
             <button id="up4" onclick="upgrade(3)"></button>
             <button id="aut4" onclick="automatizar(3)"></button>
-            
             <button id="up5" onclick="upgrade(4)"></button>
             <button id="aut5" onclick="automatizar(4)"></button>
-            
             <button id="up6" onclick="upgrade(5)"></button>
             <button id="aut6" onclick="automatizar(5)"></button>
-
             <button id="mult1" class="botao-largo" onclick="multiplicador(0)"></button>
             <button id="mult2" class="botao-largo" onclick="multiplicador(1)"></button>
         </div>
     </main>
 
-    <div style="display: flex; justify-content: center; width: 100%;">
+    <div id="area-reset">
         <button id="reset" onclick="reset()">RESET PROGRESSO</button>
     </div>
-    <footer style="color: rgb(44, 44, 44);">Made by MacacoSamurai</footer>
+    
+    <footer>Made by MacacoSamurai</footer>
 </body>
 </html>
