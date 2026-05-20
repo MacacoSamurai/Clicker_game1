@@ -5,6 +5,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="Principal.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="Principal.js" defer></script>
     <link rel="shortcut icon" type="image/x-icon" href="icon.jpg">
 </head>
@@ -13,9 +14,11 @@
     <main id="tela-login" class="conteiner">
         <h1>Quadrado Clicker</h1>
         <div class="login-box">
-            <p>Escolha seu Nickname:</p>
-            <input type="text" id="nick-input" placeholder="Seu nome aqui...">
-            <button id="btn-iniciar" onclick="iniciarJogo()">COMEÇAR JOGO</button>
+            <h2>Acessar Área de Jogo</h2>
+            <p>Insira suas credenciais para entrar ou criar uma conta:</p>
+            <input type="text" id="nick-input" placeholder="Digite seu Nickname..." autocomplete="off">
+            <input type="password" id="senha-input" placeholder="Digite sua Senha...">
+            <button id="btn-iniciar" onclick="iniciarJogo()">ENTRAR / REGISTRAR</button>
         </div>
     </main>
 
@@ -46,10 +49,23 @@
         </div>
     </main>
 
-    <div id="area-reset">
-        <button id="reset" onclick="reset()">RESET PROGRESSO</button>
+    <div class="centralizar-reset" id="area-reset">
+        <button class="reset" onclick="reset()">Resetar Progresso</button>
     </div>
-    
-    <footer>Made by MacacoSamurai</footer>
+
+    <div id="custom-toast" class="toast-aviso"></div>
+
+    <div id="custom-modal" class="modal-fundo">
+        <div class="modal-conteudo">
+            <h3>Conta Disponível!</h3>
+            <p id="modal-mensagem">Deseja criar uma conta nova?</p>
+            <div class="modal-botoes">
+                <button id="btn-modal-confirmar" class="btn-confirmar">Criar Conta</button>
+                <button onclick="fecharModal()" class="btn-cancelar">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <footer>Criado por MacacoSamurai</footer>
 </body>
 </html>
