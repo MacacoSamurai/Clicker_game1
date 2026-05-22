@@ -156,39 +156,91 @@ async function enviarLoteAoServidor() {
 }
 
 // --- MERCADO DE COMPRAS (DEDUÇÃO SIMULTÂNEA NAS DUAS VARIÁVEIS) ---
-function upgrade(index) {
+async function upgrade(index) {
     let u = estatisticas.upgrades[index];
     if (valorVisual >= u.custo) {
+        // 1. Deduz localmente na hora para manter o jogo fluido
         valorVisual -= u.custo;
         estatisticas.val -= u.custo;
         estatisticas.inc += u.ganho;
         u.custo = Math.ceil(u.custo * u.multiplicador);
-        salvarSincronizado();
-        atl();
+        
+        atl(); // Atualiza os textos na tela imediatamente
+
+        // 2. SINCRONIZAÇÃO IMEDIATA COM O BANCO
+        if (estatisticas.nome && supabaseClient) {
+            try {
+                const { error } = await supabaseClient
+                    .from('jogadores')
+                    .update({ 
+                        val: estatisticas.val, 
+                        inc: estatisticas.inc,
+                        upgrades: estatisticas.upgrades // Salva o novo custo do upgrade
+                    })
+                    .eq('nickname', estatisticas.nome);
+
+                if (error) {
+                    console.error("Erro ao salvar upgrade no Supabase:", error.message);
+                }
+            } catch (err) {
+                console.error("Falha de rede ao comprar upgrade:", err);
+            }
+        }
+        
+        // Mantém o salvamento local no navegador por segurança
+        salvarNoNavegador(); 
     }
 }
 
-function automatizar(index) {
+async function comprarAuto(index) {
     let a = estatisticas.autos[index];
     if (valorVisual >= a.custo) {
         valorVisual -= a.custo;
         estatisticas.val -= a.custo;
-        estatisticas.auto += a.ganho;
+        estatisticas.auto += a.ganho; // Aumenta o valor por segundo
         a.custo = Math.ceil(a.custo * a.multiplicador);
-        salvarSincronizado();
+        
         atl();
+
+        if (estatisticas.nome && supabaseClient) {
+            try {
+                await supabaseClient
+                    .from('jogadores')
+                    .update({ 
+                        val: estatisticas.val, 
+                        auto: estatisticas.auto,
+                        autos: estatisticas.autos
+                    })
+                    .eq('nickname', estatisticas.nome);
+            } catch (err) { console.error(err); }
+        }
+        salvarNoNavegador();
     }
 }
 
-function multiplicador(index) {
+async function comprarMulti(index) {
     let m = estatisticas.multi[index];
     if (valorVisual >= m.custo) {
         valorVisual -= m.custo;
         estatisticas.val -= m.custo;
-        estatisticas.mul += m.ganho;
+        estatisticas.mul += m.ganho; // Aumenta o multiplicador geral
         m.custo = Math.ceil(m.custo * m.multiplicador);
-        salvarSincronizado();
+        
         atl();
+
+        if (estatisticas.nome && supabaseClient) {
+            try {
+                await supabaseClient
+                    .from('jogadores')
+                    .update({ 
+                        val: estatisticas.val, 
+                        mul: estatisticas.mul,
+                        multi: estatisticas.multi
+                    })
+                    .eq('nickname', estatisticas.nome);
+            } catch (err) { console.error(err); }
+        }
+        salvarNoNavegador();
     }
 }
 
