@@ -8,9 +8,12 @@ body {
     background-color: rgb(0, 0, 0);
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    align-items: center;        /* Centraliza tudo horizontalmente */
+    justify-content: flex-start; /* Alinha o conteúdo a partir do topo */
     min-height: 100vh;
     padding: 20px;
+    font-family: Arial, sans-serif;
+    overflow-y: auto;           /* Permite o scroll natural da página */
 }
 
 .conteiner {
@@ -25,70 +28,53 @@ body {
     border-radius: 15px;
     border: 1px solid aliceblue;
     padding: 25px;
+    margin-top: 20px;          /* Cola o jogo de forma elegante perto do topo */
 }
 
 .quadrado {
+    align-self: center;
     width: 70%;
     padding: 30px 10px;
     font-size: 1.5rem;
-    align-self: center;
-    background: linear-gradient(135deg, rgb(53, 53, 53), rgb(30, 30, 30));
-    color: aliceblue;
-    border: 1px solid aliceblue;
+    color: white;
+    background-color: rgb(79 94 120);
+    border: none;
+    border-radius: 10px;
     cursor: pointer;
-    border-radius: 20px;
-    font-weight: bold;
     text-transform: uppercase;
-    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.4);
-    transition: transform 0.1s ease, box-shadow 0.1s ease;
+    font-weight: bold;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    transition: transform 0.05s ease;
 }
 
 .quadrado:active {
-    transform: scale(0.95);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    transform: scale(0.97);
+}
+
+h1, h4 {
+    color: white;
 }
 
 .grid-botoes {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
+    gap: 10px;
     width: 100%;
 }
 
 .grid-botoes button {
     padding: 15px 5px;
-    font-size: 0.95rem;
     font-weight: bold;
+    color: white;
     background-color: rgb(79 94 120);
-    border: 2px solid rgb(0, 0, 0);
-    border-radius: 10px;
-    transition: opacity 0.2s ease, filter 0.2s ease;
+    border: none;
+    border-radius: 8px;
+    box-shadow: inset 0 -3px 0 rgba(0,0,0,0.2);
+    transition: all 0.1s ease;
 }
 
 .botao-largo {
     grid-column: span 2;
-}
-
-.centralizar-reset {
-    width: 100%;
-    display: flex;
-    justify-content: center;
-    margin-top: 15px;
-}
-
-.reset {
-    background-color: rgba(255, 0, 0, 0.473);
-    border: 1px solid rgb(255, 0, 0);
-    color: aliceblue;
-    padding: 10px 20px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 0.85rem;
-    transition: background-color 0.2s ease;
-}
-
-.reset:hover {
-    background-color: rgb(255, 0, 0);
 }
 
 .medidor {
@@ -100,203 +86,184 @@ body {
 }
 
 #exibir-nick {
+    color: white;
     font-size: 0.9rem;
     opacity: 0.6;
     margin-bottom: 5px;
-    color: white;
-}
-
-#medidor {
-    color: white;
 }
 
 #vps {
-    color: white;
     text-align: center;
     width: 100%;
 }
 
-footer {
-    color: rgb(60, 60, 60);
-    text-align: center;
-    margin-top: 15px;
-    font-size: 0.8rem;
-}
-
-/* --- AJUSTES INICIAIS DAS TELAS --- */
-#tela-jogo, #area-reset {
-    display: none;
-}
-
-#tela-login h1 {
-    color: white;
-    text-align: center;
-    margin-bottom: 10px;
-}
-
-/* --- ESTILIZAÇÃO COMPLETA DA TELA DE LOGIN --- */
-.login-box {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-    align-items: center;
-    width: 100%;
-}
-
-.login-box h2 {
-    color: aliceblue;
-    font-size: 1.2rem;
-}
-
-.login-box p {
-    color: #aaa;
-    font-size: 0.9rem;
-    text-align: center;
-    max-width: 80%;
-}
-
-#nick-input, #senha-input {
-    width: 85%;
-    padding: 12px;
-    border-radius: 8px;
-    border: 2px solid #444;
-    background-color: #1a1a1a;
-    color: white;
-    font-size: 1rem;
-    text-align: center;
-    transition: all 0.3s ease;
-}
-
-#nick-input:focus, #senha-input:focus {
-    border-color: aliceblue;
-    outline: none;
-    box-shadow: 0 0 10px rgba(240, 248, 255, 0.2);
-}
-
-#btn-iniciar {
-    width: 85%;
-    padding: 12px;
-    background: linear-gradient(135deg, #444, #222);
+/* --- PLACAR DE LÍDERES TOTALMENTE CUSTOMIZADO (ISOLADO) --- */
+.leaderboard-caixa-externa {
+    display: none; /* O JS mudará para 'block' ao logar */
+    width: 95%;
+    max-width: 600px;
+    background-color: rgb(43, 41, 41);
+    border-radius: 15px;
     border: 1px solid aliceblue;
-    color: white;
-    font-weight: bold;
-    font-size: 1rem;
+    padding: 20px;
+    margin-top: 12vh; 
+    margin-bottom: 60px; /* Dá folga para rolar e ver o fundo do placar com conforto */
+    
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
+}
+
+.leaderboard-caixa-externa h3 {
+    color: #f1c40f;
+    text-align: center;
+    margin-bottom: 15px;
+    font-size: 1.1rem;
     letter-spacing: 1px;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: transform 0.2s, filter 0.2s;
 }
 
-#btn-iniciar:hover {
-    filter: brightness(1.3);
-    transform: scale(1.02);
-}
-
-/* --- TOAST (AVISOS NO TOPO DO ECRÃ) --- */
-.toast-aviso {
-    position: fixed;
-    top: -100px;
-    left: 50%;
-    transform: translateX(-50%);
-    background-color: #333;
-    color: white;
-    padding: 15px 30px;
-    border-radius: 8px;
-    font-weight: bold;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
-    border: 1px solid aliceblue;
-    transition: top 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    z-index: 10000;
-    text-align: center;
-    white-space: nowrap;
-}
-
-.toast-aviso.sucesso {
-    background-color: #1b4322;
-    border-color: #2ecc71;
-}
-
-.toast-aviso.erro {
-    background-color: #5c1d1d;
-    border-color: #e74c3c;
-}
-
-.toast-aviso.mostrar {
-    top: 20px;
-}
-
-/* --- MODAL (JANELA DE CONFIRMAÇÃO DE CADASTRO) --- */
-.modal-fundo {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
+#tabela-leaderboard {
     width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.85);
+    border-collapse: collapse;
+    color: white;
+    font-size: 0.95rem;
+}
+
+#tabela-leaderboard th, #tabela-leaderboard td {
+    padding: 12px 8px;
+    text-align: center;
+    border-bottom: 1px solid #3c2929;
+}
+
+#tabela-leaderboard th {
+    background-color: rgb(79, 94, 120); /* Paleta idêntica aos botões do jogo */
+    color: white;
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+}
+
+#tabela-leaderboard tbody tr:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+#tabela-leaderboard tbody td:nth-child(1) {
+    font-weight: bold;
+    color: #aaa;
+}
+
+/* DESTAQUE DO JOGADOR ATUAL */
+.linha-destaque {
+    background-color: rgba(79, 94, 120, 0.35) !important;
+    border: 1px solid rgb(79, 94, 120);
+}
+
+.linha-destaque td {
+    color: #f1c40f !important; /* Dourado */
+    font-weight: bold;
+}
+
+/* --- ÁREA DE RESET --- */
+.centralizar-reset {
+    width: 100%;
+    justify-content: center;
+    margin-top: 15px;
+}
+
+.reset-btn {
+    background-color: #c0392b;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+/* --- MODAIS E NOTIFICAÇÕES TOAST --- */
+.modal-sobreposicao {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background-color: rgba(0,0,0,0.7);
+    display: none;
     justify-content: center;
     align-items: center;
-    z-index: 9999;
+    z-index: 1000;
 }
 
-.modal-conteudo {
+.modal-caixa {
     background-color: #2b2929;
-    border: 2px solid aliceblue;
-    padding: 30px;
-    border-radius: 15px;
+    padding: 20px;
+    border-radius: 10px;
+    border: 1px solid #555;
     text-align: center;
-    max-width: 420px;
-    width: 85%;
-    animation: abrirModal 0.3s ease-out;
-}
-
-.modal-conteudo h3 {
-    color: #2ecc71;
-    margin-bottom: 10px;
-    font-size: 1.4rem;
-}
-
-.modal-conteudo p {
-    color: #ccc;
-    margin-bottom: 25px;
-    line-height: 1.4;
+    max-width: 400px;
+    color: white;
 }
 
 .modal-botoes {
     display: flex;
-    gap: 15px;
+    gap: 10px;
     justify-content: center;
+    margin-top: 15px;
 }
 
-.modal-botoes button {
-    padding: 12px 24px;
-    border-radius: 6px;
-    font-weight: bold;
-    cursor: pointer;
-    border: none;
-    font-size: 0.95rem;
-    transition: transform 0.1s, filter 0.2s;
-}
+.btn-confirmar { background-color: #27ae60; color: white; padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;}
+.btn-cancelar { background-color: #7f8c8d; color: white; padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; }
 
-.modal-botoes button:hover {
-    filter: brightness(1.2);
-}
-
-.modal-botoes button:active {
-    transform: scale(0.95);
-}
-
-.btn-confirmar {
+.toast-aviso {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
     background-color: #2ecc71;
-    color: #111;
+    color: white;
+    padding: 15px 25px;
+    border-radius: 8px;
+    font-weight: bold;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    pointer-events: none;
+    z-index: 2000;
 }
 
-.btn-cancelar {
-    background-color: #e74c3c;
+.toast-aviso.mostrar { opacity: 1; }
+.toast-aviso.erro { background-color: #e74c3c; }
+
+footer {
+    color: rgb(44, 44, 44);
+    text-align: center;
+    margin-top: 15px;
+}
+
+#tela-jogo, #area-reset {
+    display: none;
+}
+
+.login-box {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: center;
+}
+
+.login-box p { color: #ccc; }
+
+#nick-input, #senha-input {
+    padding: 12px;
+    border-radius: 8px;
+    border: none;
+    width: 80%;
+    text-align: center;
+    background-color: #222;
     color: white;
 }
 
-@keyframes abrirModal {
-    from { transform: scale(0.7); opacity: 0; }
-    to { transform: scale(1); opacity: 1; }
+#btn-iniciar {
+    background-color: #27ae60;
+    color: white;
+    border: none;
+    padding: 12px 25px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    margin-top: 5px;
 }

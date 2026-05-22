@@ -14,11 +14,10 @@
     <main id="tela-login" class="conteiner">
         <h1>Quadrado Clicker</h1>
         <div class="login-box">
-            <h2>Acessar Área de Jogo</h2>
-            <p>Insira suas credenciais para entrar ou criar uma conta:</p>
-            <input type="text" id="nick-input" placeholder="Digite seu Nickname..." autocomplete="off">
-            <input type="password" id="senha-input" placeholder="Digite sua Senha...">
-            <button id="btn-iniciar" onclick="iniciarJogo()">ENTRAR / REGISTRAR</button>
+            <p>Escolha seu Nickname:</p>
+            <input type="text" id="nick-input" placeholder="Seu nome aqui...">
+            <input type="password" id="senha-input" placeholder="Digite sua Senha">
+            <button id="btn-iniciar" onclick="iniciarJogo()">COMEÇAR JOGO</button>
         </div>
     </main>
 
@@ -49,23 +48,42 @@
         </div>
     </main>
 
+    <section id="aba-leaderboard" class="leaderboard-caixa-externa">
+        <h3>🏆 TABELA DE LIDERES</h3>
+        <table id="tabela-leaderboard">
+            <thead>
+                <tr>
+                    <th>Posição</th>
+                    <th>Nome</th>
+                    <th>Pontos</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody id="corpo-leaderboard">
+                <tr>
+                    <td colspan="4">Carregando classificação...</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
     <div class="centralizar-reset" id="area-reset">
-        <button class="reset" onclick="reset()">Resetar Progresso</button>
+        <button class="reset-btn" onclick="reset()">Resetar Progresso</button>
     </div>
 
-    <div id="custom-toast" class="toast-aviso"></div>
-
-    <div id="custom-modal" class="modal-fundo">
-        <div class="modal-conteudo">
-            <h3>Conta Disponível!</h3>
-            <p id="modal-mensagem">Deseja criar uma conta nova?</p>
+    <div id="custom-modal" class="modal-sobreposicao">
+        <div class="modal-caixa">
+            <h3>Criar Nova Conta?</h3>
+            <p id="modal-mensagem"></p>
             <div class="modal-botoes">
-                <button id="btn-modal-confirmar" class="btn-confirmar">Criar Conta</button>
+                <button id="btn-modal-confirmar" class="btn-confirmar">Sim, Criar</button>
                 <button onclick="fecharModal()" class="btn-cancelar">Cancelar</button>
             </div>
         </div>
     </div>
 
-    <footer>Criado por MacacoSamurai</footer>
+    <div id="custom-toast" class="toast-aviso"></div>
+
+    <footer>&copy; MacacoSamurai</footer>
 </body>
 </html>
