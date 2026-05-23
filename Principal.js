@@ -34,6 +34,10 @@ let estatisticas = {
     verif: 0 
 };
 
+// Aliases para bater com os nomes chamados no HTML (onclick="automatizar()" e onclick="multiplicador()")
+function automatizar(index) { comprarAuto(index); }
+function multiplicador(index) { comprarMulti(index); }
+
 // --- VARIÁVEIS PARA ELIMINAR FLUTUAÇÃO VISUAL (INTERPOLAÇÃO) ---
 let valorVisual = 0;
 let totalVisual = 0;
@@ -72,9 +76,10 @@ function ocioso() {
     }
 
     // 3. Sincroniza com o servidor a cada 3 segundos em ócio absoluto
+    // (só envia se houver cliques pendentes, evitando chamadas desnecessárias)
     contadorSave++;
     if (contadorSave >= 30) { 
-        enviarLoteAoServidor();
+        if (cliquesAcumulados > 0) enviarLoteAoServidor();
         contadorSave = 0;
     }
     atl();
@@ -304,11 +309,17 @@ async function salvarNoSupabase() {
     if (!estatisticas.nome || estatisticas.nome.trim() === "" || !supabaseClient) return;
 
     try {
+        // Inclui todos os campos para não sobrescrever dados numéricos com valores vazios
         const { error } = await supabaseClient
             .from('jogadores')
             .upsert({
                 nickname: estatisticas.nome,
                 senha: estatisticas.senha, 
+                val: estatisticas.val,
+                inc: estatisticas.inc,
+                mul: estatisticas.mul,
+                auto: estatisticas.auto,
+                total: estatisticas.total,
                 upgrades: estatisticas.upgrades,
                 autos: estatisticas.autos,
                 multi: estatisticas.multi
@@ -324,9 +335,12 @@ function carregarDoNavegador() {
     const save = localStorage.getItem("save_clicker_game");
     if (save) {
         const dadosCarregados = JSON.parse(save);
+        // Só usa o cache local se tiver nome e senha; depois puxa do servidor para garantir consistência
         if (dadosCarregados.nome && dadosCarregados.senha) {
             Object.assign(estatisticas, dadosCarregados);
             mostrarTelaJogo();
+            // Puxa do Supabase para sobrescrever o cache local com dados reais, corrigindo o ioiô
+            puxarDadosDoSupabase(dadosCarregados.nome);
         }
     }
 }
