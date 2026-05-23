@@ -1,11 +1,16 @@
+// ============================================================
+// QUADRADO CLICKER — Principal.js (autenticação via supabase.auth)
+// ============================================================
+
 const { createClient } = supabase;
 const SUPABASE_URL = 'https://vqqvfvtuikpohzuzgymb.supabase.co';
 const SUPABASE_KEY = "sb_publishable_EV20V63Y2rjUscWHu28rbA_irMTciZk";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// Estado do jogo — senha removida daqui, agora é responsabilidade do supabase.auth
 let estatisticas = {
     nome: "",
-    senha: "", 
+    userId: "",   // novo: guarda o auth.uid() para identificar o jogador no banco
     val: 0,
     inc: 1,
     mul: 1,
@@ -31,54 +36,45 @@ let estatisticas = {
         {id:"aut5", custo: 150000,  ganho: 10000,  multiplicador: 1.4},
         {id:"aut6", custo: 1500000, ganho: 100000, multiplicador: 1.4}
     ],
-    verif: 0 
+    verif: 0
 };
 
-// Aliases para bater com os nomes chamados no HTML (onclick="automatizar()" e onclick="multiplicador()")
+// Aliases para bater com os nomes chamados no HTML
 function automatizar(index) { comprarAuto(index); }
 function multiplicador(index) { comprarMulti(index); }
 
-// --- VARIÁVEIS PARA ELIMINAR FLUTUAÇÃO VISUAL (INTERPOLAÇÃO) ---
+// --- VARIÁVEIS VISUAIS E DE BUFFER ---
 let valorVisual = 0;
 let totalVisual = 0;
 let primeiroCarregamento = true;
-
-// --- VARIÁVEIS DE CONTROLO DO BUFFER DE CLIQUES ---
 let cliquesAcumulados = 0;
 let temporizadorClique = null;
 let contadorSave = 0;
 
-// --- LOOP DE GANHO OCIOSO VISUAL E AJUSTE SUAVE DE TELA ---
+// ============================================================
+// LOOP OCIOSO — ganho passivo + sincronização periódica
+// ============================================================
 function ocioso() {
     if (!estatisticas.nome) return;
 
-    // 1. O ganho passivo visual acontece na tela de forma fluida
+    // Incrementa o valor visual suavemente a cada 100ms (ganho passivo)
     let g = (estatisticas.auto * estatisticas.mul) / 10;
     valorVisual += g;
     totalVisual += g;
 
-    // 2. Sistema de aproximação inteligente (Apenas para CIMA)
-    // Se parou de clicar, a tela SÓ vai se ajustar se o banco de dados tiver MAIS pontos que a tela.
-    // Se o banco estiver com menos (atraso de rede), a tela simplesmente espera e NUNCA cai!
+    // Se não há cliques pendentes, aproxima a tela do valor real do servidor (só sobe, nunca cai)
     if (cliquesAcumulados === 0 && !temporizadorClique) {
-        
-        // Ajuste do saldo atual (Apenas se o banco for maior)
         if (estatisticas.val > valorVisual) {
-            let diferenca = estatisticas.val - valorVisual;
-            valorVisual += diferenca * 0.2; // Sobe suavemente para alcançar o servidor
+            valorVisual += (estatisticas.val - valorVisual) * 0.2;
         }
-        
-        // Ajuste do total (Apenas se o banco for maior)
         if (estatisticas.total > totalVisual) {
-            let diferencaTotal = estatisticas.total - totalVisual;
-            totalVisual += diferencaTotal * 0.2;
+            totalVisual += (estatisticas.total - totalVisual) * 0.2;
         }
     }
 
-    // 3. Sincroniza com o servidor a cada 3 segundos em ócio absoluto
-    // (só envia se houver cliques pendentes, evitando chamadas desnecessárias)
+    // Envia lote ao servidor a cada 3 segundos, só se houver cliques acumulados
     contadorSave++;
-    if (contadorSave >= 30) { 
+    if (contadorSave >= 30) {
         if (cliquesAcumulados > 0) enviarLoteAoServidor();
         contadorSave = 0;
     }
@@ -86,170 +82,138 @@ function ocioso() {
 }
 setInterval(ocioso, 100);
 
-// --- CLIQUE PRINCIPAL ---
+// ============================================================
+// CLIQUE PRINCIPAL
+// ============================================================
 function din() {
-    if (estatisticas.verif === 0) {
-        estatisticas.verif = 1;
-    }
+    if (estatisticas.verif === 0) estatisticas.verif = 1;
 
-    // Soma imediata na interface visual do utilizador
     let ganhoLocal = estatisticas.inc * estatisticas.mul;
     valorVisual += ganhoLocal;
     totalVisual += ganhoLocal;
     atl();
 
-    // Acumula na fila para o envio unificado à nuvem
     cliquesAcumulados++;
-    contadorSave = 0; // Pausa o save do ócio enquanto clica
+    contadorSave = 0;
 
     if (!temporizadorClique) {
-        temporizadorClique = setTimeout(() => {
-            enviarLoteAoServidor();
-        }, 500); // Consolida e envia pacotes a cada meio segundo
+        temporizadorClique = setTimeout(() => { enviarLoteAoServidor(); }, 500);
     }
 }
 
-// --- FUNÇÃO CENTRAL DE SINCRONIZAÇÃO SEM JOGOS DE IOIÔ ---
+// ============================================================
+// SINCRONIZAÇÃO — envia lote de cliques ao servidor via RPC
+// A RPC agora valida pelo user_id (JWT) em vez de nickname+senha
+// ============================================================
 async function enviarLoteAoServidor() {
     const cliquesParaEnviar = cliquesAcumulados;
-    cliquesAcumulados = 0; 
-    
-    if (temporizadorClique) {
-        clearTimeout(temporizadorClique);
-        temporizadorClique = null;
-    }
+    cliquesAcumulados = 0;
+    if (temporizadorClique) { clearTimeout(temporizadorClique); temporizadorClique = null; }
 
-    if (estatisticas.nome && supabaseClient) {
-        try {
-            const { data, error } = await supabaseClient
-                .rpc('registrar_clique_seguro', { 
-                    p_nickname: estatisticas.nome, 
-                    p_senha: estatisticas.senha,
-                    p_quantidade_cliques: cliquesParaEnviar
-                });
+    if (!estatisticas.userId || !supabaseClient) return;
 
-            if (error) {
-                console.error("Erro ao validar dados no servidor:", error.message);
-                return;
+    try {
+        const { data, error } = await supabaseClient
+            .rpc('registrar_clique_seguro', {
+                p_user_id: estatisticas.userId,
+                p_quantidade_cliques: cliquesParaEnviar
+            });
+
+        if (error) { console.error("Erro RPC clique:", error.message); return; }
+
+        if (data && data.length > 0) {
+            estatisticas.val   = data[0].novo_val;
+            estatisticas.total = data[0].novo_total;
+
+            if (primeiroCarregamento) {
+                valorVisual = estatisticas.val;
+                totalVisual = estatisticas.total;
+                primeiroCarregamento = false;
             }
 
-            if (data && data.length > 0) {
-                // Atualiza o valor real matemático vindo da nuvem
-                estatisticas.val = data[0].novo_val;
-                estatisticas.total = data[0].novo_total;
-                
-                // Se for o primeiro carregamento, alinha na hora
-                if (primeiroCarregamento) {
-                    valorVisual = estatisticas.val;
-                    totalVisual = estatisticas.total;
-                    primeiroCarregamento = false;
-                }
-                
-                // SE POR ACASO a tela ficou muito para trás do servidor (ex: muito tempo sem clicar ou lag), 
-                // força o valor visual a saltar para o valor real para o jogador não perder pontos.
-                if (estatisticas.val > valorVisual + (estatisticas.inc * estatisticas.mul * 10)) {
-                    valorVisual = estatisticas.val;
-                    totalVisual = estatisticas.total;
-                }
-
-                atl();
+            // Se a tela ficou muito atrás do servidor, salta para o valor real
+            if (estatisticas.val > valorVisual + (estatisticas.inc * estatisticas.mul * 10)) {
+                valorVisual = estatisticas.val;
+                totalVisual = estatisticas.total;
             }
-        } catch (err) {
-            console.error("Falha ao comunicar com o servidor:", err);
+            atl();
         }
-    }
+    } catch (err) { console.error("Falha de rede ao enviar cliques:", err); }
 }
 
-// --- MERCADO DE COMPRAS (DEDUÇÃO SIMULTÂNEA NAS DUAS VARIÁVEIS) ---
+// ============================================================
+// COMPRAS — upgrade, auto, multiplicador
+// Todas agora identificam o jogador pelo user_id (não mais nickname)
+// ============================================================
 async function upgrade(index) {
     let u = estatisticas.upgrades[index];
-    if (valorVisual >= u.custo) {
-        // 1. Deduz localmente na hora para manter o jogo fluido
-        valorVisual -= u.custo;
-        estatisticas.val -= u.custo;
-        estatisticas.inc += u.ganho;
-        u.custo = Math.ceil(u.custo * u.multiplicador);
-        
-        atl(); // Atualiza os textos na tela imediatamente
+    if (valorVisual < u.custo) return;
 
-        // 2. SINCRONIZAÇÃO IMEDIATA COM O BANCO
-        if (estatisticas.nome && supabaseClient) {
-            try {
-                const { error } = await supabaseClient
-                    .from('jogadores')
-                    .update({ 
-                        val: estatisticas.val, 
-                        inc: estatisticas.inc,
-                        upgrades: estatisticas.upgrades // Salva o novo custo do upgrade
-                    })
-                    .eq('nickname', estatisticas.nome);
+    valorVisual        -= u.custo;
+    estatisticas.val   -= u.custo;
+    estatisticas.inc   += u.ganho;
+    u.custo = Math.ceil(u.custo * u.multiplicador);
+    atl();
 
-                if (error) {
-                    console.error("Erro ao salvar upgrade no Supabase:", error.message);
-                }
-            } catch (err) {
-                console.error("Falha de rede ao comprar upgrade:", err);
-            }
-        }
-        
-        // Mantém o salvamento local no navegador por segurança
-        salvarNoNavegador(); 
+    if (estatisticas.userId && supabaseClient) {
+        try {
+            const { error } = await supabaseClient
+                .from('jogadores')
+                .update({ val: estatisticas.val, inc: estatisticas.inc, upgrades: estatisticas.upgrades })
+                .eq('user_id', estatisticas.userId); // identifica pelo user_id seguro
+            if (error) console.error("Erro upgrade:", error.message);
+        } catch (err) { console.error(err); }
     }
+    salvarNoNavegador();
 }
 
 async function comprarAuto(index) {
     let a = estatisticas.autos[index];
-    if (valorVisual >= a.custo) {
-        valorVisual -= a.custo;
-        estatisticas.val -= a.custo;
-        estatisticas.auto += a.ganho; // Aumenta o valor por segundo
-        a.custo = Math.ceil(a.custo * a.multiplicador);
-        
-        atl();
+    if (valorVisual < a.custo) return;
 
-        if (estatisticas.nome && supabaseClient) {
-            try {
-                await supabaseClient
-                    .from('jogadores')
-                    .update({ 
-                        val: estatisticas.val, 
-                        auto: estatisticas.auto,
-                        autos: estatisticas.autos
-                    })
-                    .eq('nickname', estatisticas.nome);
-            } catch (err) { console.error(err); }
-        }
-        salvarNoNavegador();
+    valorVisual        -= a.custo;
+    estatisticas.val   -= a.custo;
+    estatisticas.auto  += a.ganho;
+    a.custo = Math.ceil(a.custo * a.multiplicador);
+    atl();
+
+    if (estatisticas.userId && supabaseClient) {
+        try {
+            const { error } = await supabaseClient
+                .from('jogadores')
+                .update({ val: estatisticas.val, auto: estatisticas.auto, autos: estatisticas.autos })
+                .eq('user_id', estatisticas.userId);
+            if (error) console.error("Erro auto:", error.message);
+        } catch (err) { console.error(err); }
     }
+    salvarNoNavegador();
 }
 
 async function comprarMulti(index) {
     let m = estatisticas.multi[index];
-    if (valorVisual >= m.custo) {
-        valorVisual -= m.custo;
-        estatisticas.val -= m.custo;
-        estatisticas.mul += m.ganho; // Aumenta o multiplicador geral
-        m.custo = Math.ceil(m.custo * m.multiplicador);
-        
-        atl();
+    if (valorVisual < m.custo) return;
 
-        if (estatisticas.nome && supabaseClient) {
-            try {
-                await supabaseClient
-                    .from('jogadores')
-                    .update({ 
-                        val: estatisticas.val, 
-                        mul: estatisticas.mul,
-                        multi: estatisticas.multi
-                    })
-                    .eq('nickname', estatisticas.nome);
-            } catch (err) { console.error(err); }
-        }
-        salvarNoNavegador();
+    valorVisual        -= m.custo;
+    estatisticas.val   -= m.custo;
+    estatisticas.mul   += m.ganho;
+    m.custo = Math.ceil(m.custo * m.multiplicador);
+    atl();
+
+    if (estatisticas.userId && supabaseClient) {
+        try {
+            const { error } = await supabaseClient
+                .from('jogadores')
+                .update({ val: estatisticas.val, mul: estatisticas.mul, multi: estatisticas.multi })
+                .eq('user_id', estatisticas.userId);
+            if (error) console.error("Erro multi:", error.message);
+        } catch (err) { console.error(err); }
     }
+    salvarNoNavegador();
 }
 
-// --- ATUALIZAÇÃO DA INTERFACE VISUAL (USANDO VALOR VISUAL SMOOTH) ---
+// ============================================================
+// INTERFACE VISUAL
+// ============================================================
 function atl() {
     if (!estatisticas.nome) return;
 
@@ -290,271 +254,212 @@ function atl() {
 
     ajustarEstiloBotao("mult1", estatisticas.multi[0].custo);
     document.getElementById("mult1").textContent = `Mult 1: ${abreviar(estatisticas.multi[0].custo)}`;
-    
+
     ajustarEstiloBotao("mult2", estatisticas.multi[1].custo);
     document.getElementById("mult2").textContent = `Mult 2: ${abreviar(estatisticas.multi[1].custo)}`;
 }
 
-// --- PERSISTÊNCIA ---
-function salvarSincronizado() {
-    salvarNoNavegador();
-    salvarNoSupabase();
-}
-
+// ============================================================
+// PERSISTÊNCIA LOCAL
+// ============================================================
 function salvarNoNavegador() {
     localStorage.setItem("save_clicker_game", JSON.stringify(estatisticas));
 }
 
 async function salvarNoSupabase() {
-    if (!estatisticas.nome || estatisticas.nome.trim() === "" || !supabaseClient) return;
-
+    if (!estatisticas.userId || !supabaseClient) return;
     try {
-        // Inclui todos os campos para não sobrescrever dados numéricos com valores vazios
         const { error } = await supabaseClient
             .from('jogadores')
-            .upsert({
-                nickname: estatisticas.nome,
-                senha: estatisticas.senha, 
-                val: estatisticas.val,
-                inc: estatisticas.inc,
-                mul: estatisticas.mul,
-                auto: estatisticas.auto,
-                total: estatisticas.total,
-                upgrades: estatisticas.upgrades,
-                autos: estatisticas.autos,
-                multi: estatisticas.multi
-            }, { onConflict: 'nickname' });
-
-        if (error) console.error("❌ Erro ao sincronizar upgrades:", error.message);
-    } catch (err) {
-        console.error("Falha ao sincronizar dados na nuvem:", err);
-    }
+            .update({
+                val: estatisticas.val, inc: estatisticas.inc,
+                mul: estatisticas.mul, auto: estatisticas.auto,
+                total: estatisticas.total, upgrades: estatisticas.upgrades,
+                autos: estatisticas.autos, multi: estatisticas.multi
+            })
+            .eq('user_id', estatisticas.userId);
+        if (error) console.error("Erro ao salvar no Supabase:", error.message);
+    } catch (err) { console.error(err); }
 }
 
-function carregarDoNavegador() {
-    const save = localStorage.getItem("save_clicker_game");
-    if (save) {
-        const dadosCarregados = JSON.parse(save);
-        // Só usa o cache local se tiver nome e senha; depois puxa do servidor para garantir consistência
-        if (dadosCarregados.nome && dadosCarregados.senha) {
-            Object.assign(estatisticas, dadosCarregados);
-            mostrarTelaJogo();
-            // Puxa do Supabase para sobrescrever o cache local com dados reais, corrigindo o ioiô
-            puxarDadosDoSupabase(dadosCarregados.nome);
-        }
-    }
-}
-
-// --- CONTROLO VISUAL INTERNO ---
-function mostrarAviso(mensagem, tipo = "sucesso") {
-    const toast = document.getElementById("custom-toast");
-    if (!toast) return;
-    toast.textContent = mensagem;
-    toast.className = `toast-aviso ${tipo} mostrar`;
-    
-    setTimeout(() => {
-        toast.classList.remove("mostrar");
-    }, 3500);
-}
-
-function fecharModal() {
-    const modal = document.getElementById("custom-modal");
-    if (modal) modal.style.display = "none";
-}
-
-// --- SISTEMA DE LEADERBOARD DINÂMICO (TOP 9 + VOCÊ COM DESTAQUE) ---
-async function atualizarLeaderboard() {
-    if (!estatisticas.nome || !supabaseClient) return;
-
-    try {
-        // 1. Puxamos o Top 10 atualizado direto do banco de dados
-        const { data: topDez, error: errorTop } = await supabaseClient
-            .from('jogadores')
-            .select('nickname, val, total')
-            .order('total', { ascending: false })
-            .limit(10);
-
-        if (errorTop) {
-            console.error("Erro ao buscar o top 10:", errorTop.message);
-            return;
-        }
-
-        // 2. Garantimos que os TEUS dados locais mais recentes entram no cálculo, 
-        // mesmo que o banco ainda esteja a processar os milissegundos do lote.
-        let listaJogadores = [...topDez];
-        
-        // Procura se tu já estás dentro desse Top 10 enviado pelo banco
-        let meuIndiceNaLista = listaJogadores.findIndex(j => j.nickname === estatisticas.nome);
-
-        if (meuIndiceNaLista !== -1) {
-            // Se já estás no top 10, garante que a lista usa o teu valor visual ultra-recente
-            listaJogadores[meuIndiceNaLista].val = valorVisual;
-            listaJogadores[meuIndiceNaLista].total = totalVisual;
-        } else {
-            // Se ainda não estás no top 10 do banco, adicionamos-te temporariamente no fim para ordenar
-            listaJogadores.push({
-                nickname: estatisticas.nome,
-                val: valorVisual,
-                total: totalVisual
-            });
-        }
-
-        // 3. REORDENAÇÃO FORÇADA NO JAVASCRIPT: Organiza a lista inteira de forma decrescente pelo TOTAL
-        // Isto garante que se o teu total passou o de alguém, tu SOBES de posição na hora na tela!
-        listaJogadores.sort((a, b) => b.total - a.total);
-
-        const corpoTabela = document.getElementById("corpo-leaderboard");
-        if (!corpoTabela) return;
-        corpoTabela.innerHTML = "";
-
-        // 4. Descobre qual é a tua posição real após a ordenação matemática implacável
-        let minhaPosicaoReal = listaJogadores.findIndex(j => j.nickname === estatisticas.nome) + 1;
-        let estaNoTopNove = minhaPosicaoReal <= 9;
-
-        // Se estás no top 9, mostramos até 10 jogadores. Se estás fora, cortamos o 10º para dar lugar à tua linha isolada.
-        let limiteExibicao = estaNoTopNove ? Math.min(listaJogadores.length, 10) : 9;
-
-        // 5. Renderiza o Placar Correto
-        for (let i = 0; i < limiteExibicao; i++) {
-            const jogador = listaJogadores[i];
-            const linha = document.createElement("tr");
-            let posicaoTexto = `${i + 1}.`;
-
-            if (jogador.nickname === estatisticas.nome) {
-                linha.className = "linha-destaque";
-                posicaoTexto = `${i + 1}. (Você)`;
-            }
-
-            linha.innerHTML = `
-                <td>${posicaoTexto}</td>
-                <td>${jogador.nickname}</td>
-                <td>${abreviar(Math.floor(jogador.val))}</td>
-                <td>${abreviar(Math.floor(jogador.total))}</td>
-            `;
-            corpoTabela.appendChild(linha);
-        }
-
-        // 6. Se a ordenação provar que ainda estás abaixo do 9º lugar, injeta a tua linha especial no fim
-        if (!estaNoTopNove) {
-            const linhaVoce = document.createElement("tr");
-            linhaVoce.className = "linha-destaque";
-            linhaVoce.innerHTML = `
-                <td>${minhaPosicaoReal}. (Você)</td>
-                <td>${estatisticas.nome}</td>
-                <td>${abreviar(Math.floor(valorVisual))}</td>
-                <td>${abreviar(Math.floor(totalVisual))}</td>
-            `;
-            corpoTabela.appendChild(linhaVoce);
-        }
-
-    } catch (err) {
-        console.error("Falha ao processar dados do placar:", err);
-    }
-}
-setInterval(atualizarLeaderboard, 5000); // Consulta segura a cada 5 segundos
-
-// --- ACESSO DE USUÁRIOS (SHA-256) ---
-async function iniciarJogo() {
-    const nickInput = document.getElementById("nick-input").value.trim();
-    const senhaInput = document.getElementById("senha-input").value.trim();
-    
-    if (nickInput.length < 3) { mostrarAviso("O nome precisa de pelo menos 3 letras!", "erro"); return; }
-    if (senhaInput.length < 3) { mostrarAviso("A senha precisa de pelo menos 3 caracteres!", "erro"); return; }
-
-    try {
-        const hashSenha = await generarHashSenha(senhaInput);
-
-        const { data, error } = await supabaseClient
-            .from('jogadores')
-            .select('nickname, senha')
-            .eq('nickname', nickInput)
-            .maybeSingle();
-
-        if (error) {
-            console.error("Erro ao verificar conta no Supabase:", error);
-            mostrarAviso("Erro ao conectar ao servidor.", "erro");
-            return;
-        }
-
-        if (!data) {
-            document.getElementById("modal-mensagem").textContent = `O nickname "${nickInput}" está disponível! Deseja criar uma conta nova?`;
-            const modal = document.getElementById("custom-modal");
-            if (modal) modal.style.display = "flex";
-            
-            document.getElementById("btn-modal-confirmar").onclick = function() {
-                estatisticas.nome = nickInput;
-                estatisticas.senha = hashSenha; 
-                fecharModal();
-                mostrarTelaJogo();
-                salvarSincronizado(); 
-                mostrarAviso("Sua conta foi registrada com sucesso!", "sucesso");
-            };
-            return;
-        }
-
-        if (hashSenha === data.senha) {
-            estatisticas.nome = nickInput;
-            estatisticas.senha = data.senha;
-            await puxarDadosDoSupabase(nickInput);
-        } else {
-            mostrarAviso("❌ Senha incorreta para este nickname!", "erro");
-        }
-    } catch (err) {
-        console.error("Falha no processo de login:", err);
-    }
-}
-
-async function puxarDadosDoSupabase(nickname) {
+// ============================================================
+// CARREGAR DADOS DO SUPABASE após login
+// ============================================================
+async function puxarDadosDoSupabase(userId) {
     try {
         const { data, error } = await supabaseClient
             .from('jogadores')
             .select('*')
-            .eq('nickname', nickname)
+            .eq('user_id', userId)
             .single();
 
-        if (error) {
-            console.error("Erro ao baixar dados:", error.message);
-            return;
-        }
+        if (error) { console.error("Erro ao carregar dados:", error.message); return; }
 
         if (data) {
-            estatisticas.val = data.val;
-            estatisticas.inc = data.inc;
-            estatisticas.mul = data.mul;
-            estatisticas.auto = data.auto;
+            estatisticas.nome  = data.nickname;
+            estatisticas.userId = userId;
+            estatisticas.val   = data.val;
+            estatisticas.inc   = data.inc;
+            estatisticas.mul   = data.mul;
+            estatisticas.auto  = data.auto;
             estatisticas.total = data.total;
-            
-            valorVisual = data.val;
-            totalVisual = data.total;
+            valorVisual        = data.val;
+            totalVisual        = data.total;
             primeiroCarregamento = false;
 
             if (data.upgrades) estatisticas.upgrades = data.upgrades;
-            if (data.autos) estatisticas.autos = data.autos;
-            if (data.multi) estatisticas.multi = data.multi;
+            if (data.autos)    estatisticas.autos    = data.autos;
+            if (data.multi)    estatisticas.multi    = data.multi;
 
-            if (estatisticas.inc > 1 || estatisticas.mul > 1) {
-                estatisticas.verif = 1;
-            }
+            if (estatisticas.inc > 1 || estatisticas.mul > 1) estatisticas.verif = 1;
 
-            salvarNoNavegador(); 
+            salvarNoNavegador();
             mostrarTelaJogo();
-            mostrarAviso(`🎮 Bem-vindo de volta, ${nickname}!`, "sucesso");
+            mostrarAviso(`🎮 Bem-vindo de volta, ${estatisticas.nome}!`, "sucesso");
         }
-    } catch (err) {
-        console.error("Erro crítico ao carregar dados da nuvem:", err);
+    } catch (err) { console.error("Erro crítico ao carregar dados:", err); }
+}
+
+// ============================================================
+// AUTENTICAÇÃO — cadastro e login via supabase.auth
+// ============================================================
+async function iniciarJogo() {
+    const emailInput = document.getElementById("nick-input").value.trim();   // campo reutilizado para email
+    const senhaInput = document.getElementById("senha-input").value.trim();
+
+    if (emailInput.length < 5 || !emailInput.includes("@")) {
+        mostrarAviso("Digite um email válido!", "erro"); return;
+    }
+    if (senhaInput.length < 6) {
+        mostrarAviso("A senha precisa de pelo menos 6 caracteres!", "erro"); return;
+    }
+
+    // Tenta fazer login primeiro; se falhar, oferece cadastro
+    const { data: loginData, error: loginError } = await supabaseClient.auth.signInWithPassword({
+        email: emailInput,
+        password: senhaInput
+    });
+
+    if (!loginError && loginData.user) {
+        // Login bem sucedido — carrega os dados do jogador
+        await puxarDadosDoSupabase(loginData.user.id);
+        return;
+    }
+
+    // Login falhou — pode ser conta nova
+    if (loginError && loginError.message.includes("Invalid login credentials")) {
+        // Abre modal para criar conta nova
+        document.getElementById("modal-mensagem").textContent =
+            `Nenhuma conta encontrada com este email. Deseja criar uma conta nova?`;
+        const modal = document.getElementById("custom-modal");
+        if (modal) modal.style.display = "flex";
+
+        document.getElementById("btn-modal-confirmar").onclick = async function() {
+            fecharModal();
+            await criarContaNova(emailInput, senhaInput);
+        };
+    } else {
+        mostrarAviso("Erro ao conectar: " + (loginError?.message || "Tente novamente."), "erro");
     }
 }
 
-function mostrarTelaJogo() {
-    document.getElementById("tela-login").style.display       = "none";
-    document.getElementById("tela-jogo").style.display        = "flex";
-    document.getElementById("area-reset").style.display       = "flex";
-    document.getElementById("aba-leaderboard").style.display  = "block";
-    document.getElementById("exibir-nick").textContent        = `Jogador: ${estatisticas.nome}`;
-    atl();
-    atualizarLeaderboard();
+async function criarContaNova(email, senha) {
+    // Pede nickname antes de criar a conta
+    const nick = prompt("Escolha seu Nickname (mínimo 3 letras):");
+    if (!nick || nick.trim().length < 3) {
+        mostrarAviso("Nickname inválido. Conta não criada.", "erro"); return;
+    }
+
+    // Verifica se o nickname já está em uso
+    const { data: nickExiste } = await supabaseClient
+        .from('jogadores')
+        .select('nickname')
+        .eq('nickname', nick.trim())
+        .maybeSingle();
+
+    if (nickExiste) {
+        mostrarAviso("Este nickname já está em uso! Escolha outro.", "erro"); return;
+    }
+
+    // Cria o usuário no supabase.auth (bcrypt com salt automático)
+    const { data: signupData, error: signupError } = await supabaseClient.auth.signUp({
+        email: email,
+        password: senha
+    });
+
+    if (signupError) { mostrarAviso("Erro ao criar conta: " + signupError.message, "erro"); return; }
+
+    const userId = signupData.user.id;
+
+    // Cria o registro na tabela jogadores com o user_id linkado
+    const { error: insertError } = await supabaseClient
+        .from('jogadores')
+        .insert({
+            user_id:  userId,
+            nickname: nick.trim(),
+            val: 0, inc: 1, mul: 1, auto: 0, total: 0,
+            upgrades: estatisticas.upgrades,
+            autos:    estatisticas.autos,
+            multi:    estatisticas.multi
+        });
+
+    if (insertError) { mostrarAviso("Erro ao salvar conta: " + insertError.message, "erro"); return; }
+
+    estatisticas.nome   = nick.trim();
+    estatisticas.userId = userId;
+    salvarNoNavegador();
+    mostrarTelaJogo();
+    mostrarAviso("Conta criada com sucesso! Bem-vindo, " + nick.trim() + "!", "sucesso");
+
+    // Após criar a conta, pergunta se quer migrar dados antigos
+    setTimeout(() => oferecer_migracao(), 2000);
 }
 
+// ============================================================
+// MIGRAÇÃO — fluxo para recuperar dados de conta antiga
+// ============================================================
+async function oferecer_migracao() {
+    const quer = confirm("Você tinha uma conta antiga (nickname + senha)?\nClique OK para migrar seu progresso!");
+    if (!quer) return;
+    await iniciarMigracao();
+}
+
+async function iniciarMigracao() {
+    const nickAntigo = prompt("Digite seu nickname ANTIGO:");
+    if (!nickAntigo || nickAntigo.trim().length < 3) { mostrarAviso("Nickname inválido.", "erro"); return; }
+
+    const senhaAntiga = prompt("Digite sua senha ANTIGA:");
+    if (!senhaAntiga || senhaAntiga.trim().length < 3) { mostrarAviso("Senha inválida.", "erro"); return; }
+
+    mostrarAviso("Verificando conta antiga...", "sucesso");
+
+    // Gera o hash SHA-256 da senha antiga (mesmo método que o sistema antigo usava)
+    const hashSenhaAntiga = await generarHashSenha(senhaAntiga.trim());
+
+    // Chama a RPC de migração no Supabase — ela valida, copia os dados e apaga o registro antigo
+    const { data, error } = await supabaseClient
+        .rpc('migrar_conta_antiga', {
+            p_nickname_antigo: nickAntigo.trim(),
+            p_hash_senha_antiga: hashSenhaAntiga,
+            p_novo_user_id: estatisticas.userId
+        });
+
+    if (error) { mostrarAviso("Erro na migração: " + error.message, "erro"); return; }
+
+    if (data === 'ok') {
+        mostrarAviso("✅ Migração feita! Seus dados antigos foram transferidos.", "sucesso");
+        // Recarrega os dados já migrados do servidor
+        await puxarDadosDoSupabase(estatisticas.userId);
+    } else if (data === 'senha_errada') {
+        mostrarAviso("❌ Nickname ou senha antiga incorretos.", "erro");
+    } else if (data === 'nickname_nao_encontrado') {
+        mostrarAviso("❌ Nenhuma conta antiga encontrada com esse nickname.", "erro");
+    } else {
+        mostrarAviso("Resposta inesperada do servidor.", "erro");
+    }
+}
+
+// Hash SHA-256 — mantido apenas para verificar a senha do sistema antigo durante a migração
 async function generarHashSenha(senhaPura) {
     const msgBuffer = new TextEncoder().encode(senhaPura);
     const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
@@ -562,6 +467,86 @@ async function generarHashSenha(senhaPura) {
     return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
+// ============================================================
+// TELA DO JOGO
+// ============================================================
+function mostrarTelaJogo() {
+    document.getElementById("tela-login").style.display      = "none";
+    document.getElementById("tela-jogo").style.display       = "flex";
+    document.getElementById("area-reset").style.display      = "flex";
+    document.getElementById("aba-leaderboard").style.display = "block";
+    document.getElementById("exibir-nick").textContent       = `Jogador: ${estatisticas.nome}`;
+    atl();
+    atualizarLeaderboard();
+}
+
+// ============================================================
+// LEADERBOARD
+// ============================================================
+async function atualizarLeaderboard() {
+    if (!estatisticas.nome || !supabaseClient) return;
+    try {
+        const { data: topDez, error } = await supabaseClient
+            .from('jogadores')
+            .select('nickname, val, total')
+            .order('total', { ascending: false })
+            .limit(10);
+
+        if (error) { console.error("Erro leaderboard:", error.message); return; }
+
+        let listaJogadores = [...topDez];
+        let meuIndice = listaJogadores.findIndex(j => j.nickname === estatisticas.nome);
+
+        if (meuIndice !== -1) {
+            listaJogadores[meuIndice].val   = valorVisual;
+            listaJogadores[meuIndice].total = totalVisual;
+        } else {
+            listaJogadores.push({ nickname: estatisticas.nome, val: valorVisual, total: totalVisual });
+        }
+
+        listaJogadores.sort((a, b) => b.total - a.total);
+
+        const corpoTabela = document.getElementById("corpo-leaderboard");
+        if (!corpoTabela) return;
+        corpoTabela.innerHTML = "";
+
+        let minhaPosicaoReal = listaJogadores.findIndex(j => j.nickname === estatisticas.nome) + 1;
+        let estaNoTopNove    = minhaPosicaoReal <= 9;
+        let limiteExibicao   = estaNoTopNove ? Math.min(listaJogadores.length, 10) : 9;
+
+        for (let i = 0; i < limiteExibicao; i++) {
+            const jogador = listaJogadores[i];
+            const linha = document.createElement("tr");
+            let posicaoTexto = `${i + 1}.`;
+            if (jogador.nickname === estatisticas.nome) {
+                linha.className = "linha-destaque";
+                posicaoTexto = `${i + 1}. (Você)`;
+            }
+            linha.innerHTML = `
+                <td>${posicaoTexto}</td>
+                <td>${jogador.nickname}</td>
+                <td>${abreviar(Math.floor(jogador.val))}</td>
+                <td>${abreviar(Math.floor(jogador.total))}</td>`;
+            corpoTabela.appendChild(linha);
+        }
+
+        if (!estaNoTopNove) {
+            const linhaVoce = document.createElement("tr");
+            linhaVoce.className = "linha-destaque";
+            linhaVoce.innerHTML = `
+                <td>${minhaPosicaoReal}. (Você)</td>
+                <td>${estatisticas.nome}</td>
+                <td>${abreviar(Math.floor(valorVisual))}</td>
+                <td>${abreviar(Math.floor(totalVisual))}</td>`;
+            corpoTabela.appendChild(linhaVoce);
+        }
+    } catch (err) { console.error("Falha ao processar leaderboard:", err); }
+}
+setInterval(atualizarLeaderboard, 5000);
+
+// ============================================================
+// UTILITÁRIOS
+// ============================================================
 function abreviar(n) {
     if (n >= 1e12) return Math.floor(n / 1e11) / 10 + "T";
     if (n >= 1e9)  return Math.floor(n / 1e8)  / 10 + "B";
@@ -570,36 +555,56 @@ function abreviar(n) {
     return Math.floor(n).toString();
 }
 
-// --- FUNÇÃO DE RESET SEGURO ---
-async function reset() {
-    if (!estatisticas.nome) return;
-
-    if (confirm("Deseja realmente resetar todo seu progresso na nuvem e no navegador?")) {
-        try {
-            if (supabaseClient) {
-                const { error } = await supabaseClient
-                    .rpc('resetar_jogador_seguro', { 
-                        p_nickname: estatisticas.nome, 
-                        p_senha: estatisticas.senha 
-                    });
-
-                if (error) {
-                    console.error("Erro ao resetar no servidor:", error.message);
-                    mostrarAviso("Erro ao sincronizar o reset com o servidor.", "erro");
-                    return;
-                }
-            }
-
-            localStorage.removeItem("save_clicker_game");
-            mostrarAviso("Progresso resetado com sucesso!", "sucesso");
-            
-            setTimeout(() => {
-                location.reload();
-            }, 1500);
-        } catch (err) {
-            console.error("Falha ao executar o reset:", err);
-        }
-    }
+function mostrarAviso(mensagem, tipo = "sucesso") {
+    const toast = document.getElementById("custom-toast");
+    if (!toast) return;
+    toast.textContent = mensagem;
+    toast.className = `toast-aviso ${tipo} mostrar`;
+    setTimeout(() => toast.classList.remove("mostrar"), 3500);
 }
 
-carregarDoNavegador();
+function fecharModal() {
+    const modal = document.getElementById("custom-modal");
+    if (modal) modal.style.display = "none";
+}
+
+// ============================================================
+// RESET
+// ============================================================
+async function reset() {
+    if (!estatisticas.userId) return;
+    if (!confirm("Deseja realmente resetar todo seu progresso?")) return;
+
+    try {
+        const { error } = await supabaseClient
+            .from('jogadores')
+            .update({
+                val: 0, inc: 1, mul: 1, auto: 0, total: 0,
+                upgrades: estatisticas.upgrades.map((u, i) => ({...u, custo: [10,100,1000,10000,100000,1000000][i]})),
+                autos:    estatisticas.autos.map((a, i)    => ({...a, custo: [15,150,1500,15000,150000,1500000][i]})),
+                multi:    estatisticas.multi.map((m, i)    => ({...m, custo: [50000,2000000][i]}))
+            })
+            .eq('user_id', estatisticas.userId);
+
+        if (error) { mostrarAviso("Erro ao resetar no servidor.", "erro"); return; }
+
+        localStorage.removeItem("save_clicker_game");
+        mostrarAviso("Progresso resetado com sucesso!", "sucesso");
+        setTimeout(() => location.reload(), 1500);
+    } catch (err) { console.error("Falha no reset:", err); }
+}
+
+// ============================================================
+// INICIALIZAÇÃO — verifica sessão ativa ao carregar a página
+// O supabase.auth mantém a sessão salva automaticamente no localStorage
+// ============================================================
+async function inicializar() {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+
+    if (session && session.user) {
+        // Sessão ativa encontrada — carrega o jogo direto sem pedir login
+        await puxarDadosDoSupabase(session.user.id);
+    }
+    // Se não tiver sessão, simplesmente fica na tela de login
+}
+inicializar();
