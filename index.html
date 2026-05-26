@@ -11,6 +11,50 @@
 </head>
 
 <body>
+    <!-- Navbar fixa no topo — preparada para futuros botões -->
+    <nav id="navbar" class="navbar">
+        <div class="navbar-esquerda">
+            <!-- espaço reservado para futuros itens -->
+        </div>
+        <div class="navbar-direita">
+            <!-- Botão do pódio — abre a aba lateral do leaderboard -->
+            <button class="navbar-btn leaderboard-toggle-btn" onclick="toggleLeaderboard()" title="Tabela de Líderes">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="#f1c40f" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="9" y="4" width="6" height="16" rx="1"/>
+                    <rect x="2" y="9" width="6" height="11" rx="1"/>
+                    <rect x="16" y="12" width="6" height="8" rx="1"/>
+                </svg>
+            </button>
+            <button class="navbar-btn logout-btn" onclick="logout()">⏻ Sair</button>
+        </div>
+    </nav>
+
+    <!-- Overlay transparente — existe só para fechar a sidebar ao clicar fora, sem bloquear o jogo -->
+    <div id="leaderboard-overlay" class="leaderboard-overlay" onclick="fecharLeaderboard()"></div>
+
+    <!-- Aba lateral do leaderboard -->
+    <aside id="aba-leaderboard" class="leaderboard-sidebar">
+        <div class="leaderboard-sidebar-header">
+            <h3>🏆 TABELA DE LIDERES</h3>
+            <button class="leaderboard-fechar-btn" onclick="fecharLeaderboard()">✕</button>
+        </div>
+        <table id="tabela-leaderboard">
+            <thead>
+                <tr>
+                    <th>Pos.</th>
+                    <th>Nome</th>
+                    <th>Pontos</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody id="corpo-leaderboard">
+                <tr>
+                    <td colspan="4">Carregando...</td>
+                </tr>
+            </tbody>
+        </table>
+    </aside>
+
     <main id="tela-login" class="conteiner">
         <h1>Quadrado Clicker</h1>
         <div class="login-box">
@@ -47,25 +91,6 @@
             <button id="mult2" class="botao-largo" onclick="multiplicador(1)"></button>
         </div>
     </main>
-
-    <section id="aba-leaderboard" class="leaderboard-caixa-externa">
-        <h3>🏆 TABELA DE LIDERES</h3>
-        <table id="tabela-leaderboard">
-            <thead>
-                <tr>
-                    <th>Posição</th>
-                    <th>Nome</th>
-                    <th>Pontos</th>
-                    <th>Total</th>
-                </tr>
-            </thead>
-            <tbody id="corpo-leaderboard">
-                <tr>
-                    <td colspan="4">Carregando classificação...</td>
-                </tr>
-            </tbody>
-        </table>
-    </section>
 
     <div class="centralizar-reset" id="area-reset">
         <button class="reset-btn" onclick="reset()">Resetar Progresso</button>

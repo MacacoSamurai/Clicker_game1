@@ -7,7 +7,7 @@ const SUPABASE_URL = 'https://vqqvfvtuikpohzuzgymb.supabase.co';
 const SUPABASE_KEY = "sb_publishable_EV20V63Y2rjUscWHu28rbA_irMTciZk";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// Estado do jogo — senha removida daqui, agora é responsabilidade do supabase.auth
+
 let estatisticas = {
     nome: "",
     userId: "",   // novo: guarda o auth.uid() para identificar o jogador no banco
@@ -16,25 +16,26 @@ let estatisticas = {
     mul: 1,
     auto: 0,
     total: 0,
+    //Devo mudar, não agora mas devo
     upgrades: [
-        {id:"up1", custo: 10,      ganho: 1,      multiplicador: 1.3},
-        {id:"up2", custo: 100,     ganho: 10,     multiplicador: 1.3},
-        {id:"up3", custo: 1000,    ganho: 100,    multiplicador: 1.3},
-        {id:"up4", custo: 10000,   ganho: 1000,   multiplicador: 1.3},
-        {id:"up5", custo: 100000,  ganho: 10000,  multiplicador: 1.3},
-        {id:"up6", custo: 1000000, ganho: 100000, multiplicador: 1.3}
+        {id:"up1", custo: 10,      ganho: 1,      multiplicador: 1.17},
+        {id:"up2", custo: 100,     ganho: 10,     multiplicador: 1.17},
+        {id:"up3", custo: 1000,    ganho: 100,    multiplicador: 1.17},
+        {id:"up4", custo: 10000,   ganho: 1000,   multiplicador: 1.17},
+        {id:"up5", custo: 100000,  ganho: 10000,  multiplicador: 1.17},
+        {id:"up6", custo: 1000000, ganho: 100000, multiplicador: 1.17}
     ],
     multi: [
-        {id:"mult1", custo: 50000,   ganho: 1, multiplicador: 9},
-        {id:"mult2", custo: 2000000, ganho: 5, multiplicador: 15}
+        {id:"mult1", custo: 50000,   ganho: 1, multiplicador: 6},
+        {id:"mult2", custo: 2000000, ganho: 5, multiplicador: 6.5}
     ],
     autos: [
-        {id:"aut1", custo: 15,      ganho: 1,      multiplicador: 1.4},
-        {id:"aut2", custo: 150,     ganho: 10,     multiplicador: 1.4},
-        {id:"aut3", custo: 1500,    ganho: 100,    multiplicador: 1.4},
-        {id:"aut4", custo: 15000,   ganho: 1000,   multiplicador: 1.4},
-        {id:"aut5", custo: 150000,  ganho: 10000,  multiplicador: 1.4},
-        {id:"aut6", custo: 1500000, ganho: 100000, multiplicador: 1.4}
+        {id:"aut1", custo: 15,      ganho: 1,      multiplicador: 1.2},
+        {id:"aut2", custo: 150,     ganho: 10,     multiplicador: 1.2},
+        {id:"aut3", custo: 1500,    ganho: 100,    multiplicador: 1.2},
+        {id:"aut4", custo: 15000,   ganho: 1000,   multiplicador: 1.2},
+        {id:"aut5", custo: 150000,  ganho: 10000,  multiplicador: 1.2},
+        {id:"aut6", custo: 1500000, ganho: 100000, multiplicador: 1.2}
     ],
     verif: 0
 };
@@ -149,19 +150,43 @@ async function upgrade(index) {
     let u = estatisticas.upgrades[index];
     if (valorVisual < u.custo) return;
 
-    valorVisual        -= u.custo;
-    estatisticas.val   -= u.custo;
-    estatisticas.inc   += u.ganho;
-    u.custo = Math.ceil(u.custo * u.multiplicador);
+    // Flush obrigatório: garante que todos os cliques pendentes chegam ao servidor
+    // antes do desconto, evitando que a RPC de clique sobrescreva o val pós-compra
+    if (cliquesAcumulados > 0) await enviarLoteAoServidor();
+
+    const custo = u.custo;
+
+    // Atualiza visualmente antes da confirmação do servidor (otimista)
+    valorVisual      -= custo;
+    estatisticas.val -= custo;
+    estatisticas.inc += u.ganho;
+    u.custo = Math.ceil(custo * u.multiplicador);
     atl();
 
     if (estatisticas.userId && supabaseClient) {
         try {
-            const { error } = await supabaseClient
-                .from('jogadores')
-                .update({ val: estatisticas.val, inc: estatisticas.inc, upgrades: estatisticas.upgrades })
-                .eq('user_id', estatisticas.userId); // identifica pelo user_id seguro
-            if (error) console.error("Erro upgrade:", error.message);
+            // Desconto atômico no servidor: val = val - custo (não manda valor absoluto)
+            const { data, error } = await supabaseClient
+                .rpc('comprar_item', {
+                    p_user_id: estatisticas.userId,
+                    p_custo:   custo,
+                    p_campo_json: 'upgrades',
+                    p_json_novo:  estatisticas.upgrades,
+                    p_campo_num:  'inc',
+                    p_valor_num:  estatisticas.inc
+                });
+            if (error) {
+                // Reverte localmente se o servidor recusou (ex: saldo insuficiente no servidor)
+                console.error("Erro upgrade:", error.message);
+                valorVisual      += custo;
+                estatisticas.val += custo;
+                estatisticas.inc -= u.ganho;
+                u.custo = custo;
+                atl();
+                return;
+            }
+            // Sincroniza val real do servidor
+            if (data) { estatisticas.val = data; valorVisual = data; }
         } catch (err) { console.error(err); }
     }
     salvarNoNavegador();
@@ -171,19 +196,37 @@ async function comprarAuto(index) {
     let a = estatisticas.autos[index];
     if (valorVisual < a.custo) return;
 
-    valorVisual        -= a.custo;
-    estatisticas.val   -= a.custo;
-    estatisticas.auto  += a.ganho;
-    a.custo = Math.ceil(a.custo * a.multiplicador);
+    if (cliquesAcumulados > 0) await enviarLoteAoServidor();
+
+    const custo = a.custo;
+
+    valorVisual       -= custo;
+    estatisticas.val  -= custo;
+    estatisticas.auto += a.ganho;
+    a.custo = Math.ceil(custo * a.multiplicador);
     atl();
 
     if (estatisticas.userId && supabaseClient) {
         try {
-            const { error } = await supabaseClient
-                .from('jogadores')
-                .update({ val: estatisticas.val, auto: estatisticas.auto, autos: estatisticas.autos })
-                .eq('user_id', estatisticas.userId);
-            if (error) console.error("Erro auto:", error.message);
+            const { data, error } = await supabaseClient
+                .rpc('comprar_item', {
+                    p_user_id: estatisticas.userId,
+                    p_custo:   custo,
+                    p_campo_json: 'autos',
+                    p_json_novo:  estatisticas.autos,
+                    p_campo_num:  'auto',
+                    p_valor_num:  estatisticas.auto
+                });
+            if (error) {
+                console.error("Erro auto:", error.message);
+                valorVisual       += custo;
+                estatisticas.val  += custo;
+                estatisticas.auto -= a.ganho;
+                a.custo = custo;
+                atl();
+                return;
+            }
+            if (data) { estatisticas.val = data; valorVisual = data; }
         } catch (err) { console.error(err); }
     }
     salvarNoNavegador();
@@ -193,19 +236,37 @@ async function comprarMulti(index) {
     let m = estatisticas.multi[index];
     if (valorVisual < m.custo) return;
 
-    valorVisual        -= m.custo;
-    estatisticas.val   -= m.custo;
-    estatisticas.mul   += m.ganho;
-    m.custo = Math.ceil(m.custo * m.multiplicador);
+    if (cliquesAcumulados > 0) await enviarLoteAoServidor();
+
+    const custo = m.custo;
+
+    valorVisual      -= custo;
+    estatisticas.val -= custo;
+    estatisticas.mul += m.ganho;
+    m.custo = Math.ceil(custo * m.multiplicador);
     atl();
 
     if (estatisticas.userId && supabaseClient) {
         try {
-            const { error } = await supabaseClient
-                .from('jogadores')
-                .update({ val: estatisticas.val, mul: estatisticas.mul, multi: estatisticas.multi })
-                .eq('user_id', estatisticas.userId);
-            if (error) console.error("Erro multi:", error.message);
+            const { data, error } = await supabaseClient
+                .rpc('comprar_item', {
+                    p_user_id: estatisticas.userId,
+                    p_custo:   custo,
+                    p_campo_json: 'multi',
+                    p_json_novo:  estatisticas.multi,
+                    p_campo_num:  'mul',
+                    p_valor_num:  estatisticas.mul
+                });
+            if (error) {
+                console.error("Erro multi:", error.message);
+                valorVisual      += custo;
+                estatisticas.val += custo;
+                estatisticas.mul -= m.ganho;
+                m.custo = custo;
+                atl();
+                return;
+            }
+            if (data) { estatisticas.val = data; valorVisual = data; }
         } catch (err) { console.error(err); }
     }
     salvarNoNavegador();
@@ -471,13 +532,30 @@ async function generarHashSenha(senhaPura) {
 // TELA DO JOGO
 // ============================================================
 function mostrarTelaJogo() {
-    document.getElementById("tela-login").style.display      = "none";
-    document.getElementById("tela-jogo").style.display       = "flex";
-    document.getElementById("area-reset").style.display      = "flex";
-    document.getElementById("aba-leaderboard").style.display = "block";
-    document.getElementById("exibir-nick").textContent       = `Jogador: ${estatisticas.nome}`;
+    document.getElementById("tela-login").style.display = "none";
+    document.getElementById("tela-jogo").style.display  = "flex";
+    document.getElementById("area-reset").style.display = "flex";
+    document.getElementById("navbar").style.display     = "flex"; // exibe a navbar
+    document.getElementById("exibir-nick").textContent  = `Jogador: ${estatisticas.nome}`;
     atl();
-    atualizarLeaderboard();
+    atualizarLeaderboard(); // carrega em background mesmo com a aba fechada
+}
+
+// Abre/fecha a aba lateral sem bloquear o jogo
+function toggleLeaderboard() {
+    const sidebar = document.getElementById("aba-leaderboard");
+    const overlay = document.getElementById("leaderboard-overlay");
+    const botao   = document.querySelector(".leaderboard-toggle-btn");
+    const aberto  = sidebar.classList.contains("aberto");
+    sidebar.classList.toggle("aberto", !aberto);
+    overlay.classList.toggle("aberto", !aberto);
+    botao.classList.toggle("ativo",    !aberto);
+}
+
+function fecharLeaderboard() {
+    document.getElementById("aba-leaderboard").classList.remove("aberto");
+    document.getElementById("leaderboard-overlay").classList.remove("aberto");
+    document.querySelector(".leaderboard-toggle-btn").classList.remove("ativo");
 }
 
 // ============================================================
