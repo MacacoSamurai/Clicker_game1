@@ -14,13 +14,11 @@ function atl() {
         const b = document.getElementById(id);
         if (!b) return;
         if (Math.floor(valorVisual) >= custo) {
-            b.style.opacity = "1";
-            b.style.cursor  = "pointer";
-            b.style.filter  = "brightness(1.1)";
+            b.classList.add("pode-comprar");
+            b.classList.remove("nao-pode-comprar");
         } else {
-            b.style.opacity = "0.4";
-            b.style.cursor  = "not-allowed";
-            b.style.filter  = "grayscale(0.5)";
+            b.classList.add("nao-pode-comprar");
+            b.classList.remove("pode-comprar");
         }
     };
 
@@ -70,4 +68,4 @@ function fecharLeaderboard() {
     document.getElementById("aba-leaderboard").classList.remove("aberto");
     document.getElementById("leaderboard-overlay").classList.remove("aberto");
     document.querySelector(".leaderboard-toggle-btn").classList.remove("ativo");
-}   
+}

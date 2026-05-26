@@ -1,3 +1,4 @@
+// JavaS/main.js
 function ocioso() {
     if (!estatisticas.nome) return;
 
@@ -23,21 +24,31 @@ function ocioso() {
 }
 setInterval(ocioso, 100);
 
-function din() {
-    // 🟢 CORREÇÃO: Força o verif a virar 1 independentemente de como iniciar
-    if (!estatisticas.verif) estatisticas.verif = 1;
+let ultimoClique = 0;
 
-    let ganhoLocal = estatisticas.inc * estatisticas.mul;
+function din() {
+    if (!estatisticas.userId) return;
+
+    const agora = Date.now();
+    if (agora - ultimoClique < 25) return; // Anti-macro
+    ultimoClique = agora;
+
+    const ganhoLocal = estatisticas.inc * estatisticas.mul;
     valorVisual += ganhoLocal;
     totalVisual += ganhoLocal;
-    atl();
 
     cliquesAcumulados++;
     contadorSave = 0;
 
-    if (!temporizadorClique) {
-        temporizadorClique = setTimeout(() => { enviarLoteAoServidor(); }, 500);
+    if (estatisticas.inc > 1 || estatisticas.mul > 1) {
+        estatisticas.verif = 1;
     }
+
+    if (!temporizadorClique) {
+        temporizadorClique = setTimeout(enviarLoteAoServidor, 350);
+    }
+
+    atl();
 }
 
 async function reset() {
@@ -45,27 +56,19 @@ async function reset() {
     if (!confirm("Deseja realmente resetar todo seu progresso?")) return;
 
     try {
-        const { error } = await supabaseClient
-            .from('jogadores')
-            .update({
-                val: 0, inc: 1, mul: 1, auto: 0, total: 0,
-                upgrades: estatisticas.upgrades.map((u, i) => ({...u, custo: [10,100,1000,10000,100000,1000000][i]})),
-                autos:    estatisticas.autos.map((a, i)    => ({...a, custo: [15,150,1500,15000,150000,1500000][i]})),
-                multi:    estatisticas.multi.map((m, i)    => ({...m, custo: [50000,2000000][i]}))
-            })
-            .eq('user_id', estatisticas.userId);
-
-        if (error) { mostrarAviso("Erro ao resetar no servidor.", "erro"); return; }
-
+        await supabaseClient.rpc('resetar_jogador', { p_user_id: estatisticas.userId });
+        
         localStorage.removeItem("save_clicker_game");
         mostrarAviso("Progresso resetado com sucesso!", "sucesso");
         setTimeout(() => location.reload(), 1500);
-    } catch (err) { console.error("Falha no reset:", err); }
+    } catch (err) { 
+        console.error("Falha no reset:", err); 
+        mostrarAviso("Erro ao resetar no servidor.", "erro");
+    }
 }
 
 async function inicializar() {
     const { data: { session } } = await supabaseClient.auth.getSession();
-
     if (session && session.user) {
         await puxarDadosDoSupabase(session.user.id);
     }

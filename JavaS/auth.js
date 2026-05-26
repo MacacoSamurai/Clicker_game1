@@ -20,20 +20,12 @@ async function iniciarJogo() {
     }
 
     const msgErro = loginError?.message?.toLowerCase() || "";
-    const erroContaNaoExiste =
-        msgErro.includes("invalid login credentials") ||
-        msgErro.includes("invalid_credentials") ||
-        msgErro.includes("user not found") ||
-        msgErro.includes("no user found");
+    if (msgErro.includes("invalid") || msgErro.includes("not found")) {
+        document.getElementById("modal-mensagem").textContent = 
+            `Email ou senha incorretos. Deseja criar uma nova conta?`;
+        document.getElementById("custom-modal").style.display = "flex";
 
-    if (erroContaNaoExiste) {
-        // Pergunta se deseja criar uma nova conta
-        document.getElementById("modal-mensagem").textContent =
-            `Email ou senha incorretos. Se você não possui uma conta, deseja criar uma nova?`;
-        const modal = document.getElementById("custom-modal");
-        if (modal) modal.style.display = "flex";
-
-        document.getElementById("btn-modal-confirmar").onclick = async function() {
+        document.getElementById("btn-modal-confirmar").onclick = async () => {
             fecharModal();
             await criarContaNova(emailInput, senhaInput);
         };
@@ -43,18 +35,22 @@ async function iniciarJogo() {
 }
 
 async function criarContaNova(email, senha) {
-    // Substitui o prompt() por um modal customizado para melhor experiência em mobile
     const nick = await obterNicknameViaModal();
     if (!nick) return;
+
+    const nickLimpo = nick.trim().replace(/[^a-zA-Z0-9_ ]/g, '').substring(0, 20);
+    if (nickLimpo.length < 3) {
+        mostrarAviso("Nickname inválido! Mínimo 3 caracteres.", "erro"); return;
+    }
 
     const { data: nickExiste } = await supabaseClient
         .from('jogadores')
         .select('nickname')
-        .eq('nickname', nick.trim())
+        .eq('nickname', nickLimpo)
         .maybeSingle();
 
     if (nickExiste) {
-        mostrarAviso("Este nickname já está em uso! Escolha outro.", "erro"); return;
+        mostrarAviso("Este nickname já está em uso!", "erro"); return;
     }
 
     const { data: signupData, error: signupError } = await supabaseClient.auth.signUp({
@@ -62,70 +58,58 @@ async function criarContaNova(email, senha) {
         password: senha
     });
 
-    if (signupError) { mostrarAviso("Erro ao criar conta: " + signupError.message, "erro"); return; }
+    if (signupError) {
+        mostrarAviso("Erro ao criar conta: " + signupError.message, "erro"); return;
+    }
 
     const userId = signupData.user.id;
 
     const { error: insertError } = await supabaseClient
         .from('jogadores')
         .insert({
-            user_id:  userId,
-            nickname: nick.trim(),
+            user_id: userId,
+            nickname: nickLimpo,
             val: 0, inc: 1, mul: 1, auto: 0, total: 0,
             upgrades: estatisticas.upgrades,
-            autos:    estatisticas.autos,
-            multi:    estatisticas.multi
+            autos: estatisticas.autos,
+            multi: estatisticas.multi
         });
 
-    if (insertError) { mostrarAviso("Erro ao salvar conta: " + insertError.message, "erro"); return; }
+    if (insertError) {
+        mostrarAviso("Erro ao salvar conta: " + insertError.message, "erro"); return;
+    }
 
-    estatisticas.nome   = nick.trim();
+    estatisticas.nome = nickLimpo;
     estatisticas.userId = userId;
     salvarNoNavegador();
     mostrarTelaJogo();
-    mostrarAviso("Conta criada com sucesso! Bem-vindo, " + nick.trim() + "!", "sucesso");
+    mostrarAviso(`Conta criada com sucesso! Bem-vindo, ${nickLimpo}!`, "sucesso");
 }
 
-// Função auxiliar para obter nickname via modal
 function obterNicknameViaModal() {
     return new Promise((resolve) => {
-        // Reutiliza o modal existente
         const modal = document.getElementById("custom-modal");
         const mensagem = document.getElementById("modal-mensagem");
-        const btnConfirmar = document.getElementById("btn-modal-confirmar");
-        const btnCancelar = document.querySelector(".btn-cancelar");
-
-        // Cria um campo de input para o nickname
         const input = document.createElement("input");
         input.type = "text";
-        input.placeholder = "Digite seu Nickname (mínimo 3 letras)";
+        input.placeholder = "Digite seu Nickname (3-20 caracteres)";
         input.style.padding = "8px";
         input.style.marginTop = "10px";
         input.style.width = "80%";
-        input.style.borderRadius = "5px";
-        input.style.border = "none";
 
-        // Adiciona ao modal
-        mensagem.textContent = "Escolha seu Nickname (mínimo 3 letras):";
+        mensagem.textContent = "Escolha seu Nickname:";
         mensagem.appendChild(input);
 
-        // Define as ações dos botões
-        btnConfirmar.onclick = function() {
-            const nick = input.value.trim();
-            if (nick.length < 3) {
-                mostrarAviso("Nickname inválido! Mínimo 3 caracteres.", "erro");
-                return;
-            }
+        document.getElementById("btn-modal-confirmar").onclick = () => {
             fecharModal();
-            // Remove o input para não poluir o modal
+            resolve(input.value);
             input.remove();
-            resolve(nick);
         };
 
-        btnCancelar.onclick = function() {
+        document.querySelector(".btn-cancelar").onclick = () => {
             fecharModal();
-            input.remove();
             resolve(null);
+            input.remove();
         };
 
         modal.style.display = "flex";

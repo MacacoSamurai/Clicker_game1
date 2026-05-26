@@ -39,7 +39,7 @@ async function atualizarLeaderboard() {
             }
             linha.innerHTML = `
                 <td>${posicaoTexto}</td>
-                <td>${jogador.nickname}</td>
+                <td>${jogador.nickname.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</td>
                 <td>${abreviar(Math.floor(jogador.val))}</td>
                 <td>${abreviar(Math.floor(jogador.total))}</td>`;
             corpoTabela.appendChild(linha);
