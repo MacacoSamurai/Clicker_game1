@@ -163,102 +163,92 @@ h1, h4 {
     width: 100%;
 }
 
-/* --- ABA LATERAL DO LEADERBOARD --- */
+/* ============================================================
+   LEADERBOARD - MODAL FLUTUANTE À DIREITA (NÃO BLOQUEIA CLIQUES)
+   ============================================================ */
 
-/* Overlay SEM pointer-events — não bloqueia cliques no jogo */
+/* Overlay transparente - não bloqueia nada */
 .leaderboard-overlay {
     display: none;
     position: fixed;
     inset: 0;
-    background-color: transparent; /* sem escurecer, sem bloquear */
+    background-color: transparent;
     z-index: 600;
-    pointer-events: none;          /* cliques passam direto para o jogo */
+    pointer-events: none; /* cliques passam direto */
 }
 .leaderboard-overlay.aberto { display: block; }
 
-/* Painel lateral — desliza da direita, largura generosa para caber as 4 colunas */
+/* Modal flutuante à direita - parece uma janela destacada */
 .leaderboard-sidebar {
     position: fixed;
-    top: 48px;
-    right: 0;
-    width: 420px;          /* mais largo para não cortar a coluna Total */
-    max-width: 95vw;
-    height: calc(100vh - 48px);
+    top: 60px;
+    right: 20px;
+    width: 400px;
+    max-width: 90vw;
+    max-height: calc(100vh - 90px);
     background-color: rgb(43, 41, 41);
-    border-left: 1px solid aliceblue;
+    border: 2px solid rgba(255, 255, 255, 0.15);
+    border-radius: 16px;
     padding: 20px 16px;
-    overflow-y: auto;
-    overflow-x: hidden;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.7);
     z-index: 700;
-    transform: translateX(100%);
-    transition: transform 0.28s ease;
-    box-shadow: -8px 0 24px rgba(0, 0, 0, 0.6);
-    pointer-events: auto; /* a própria sidebar ainda recebe cliques */
+    transform: translateX(calc(100% + 30px)); /* escondido para a direita */
+    transition: transform 0.3s ease;
+    pointer-events: none; /* por padrão, não bloqueia cliques */
+    overflow-y: auto;
+    backdrop-filter: blur(2px);
 }
-.leaderboard-sidebar.aberto { transform: translateX(0); }
+.leaderboard-sidebar.aberto { 
+    transform: translateX(0);
+}
 
-/* Cabeçalho com título e botão fechar */
+/* Mas os elementos DENTRO do modal podem ser clicados */
+.leaderboard-sidebar * {
+    pointer-events: auto;
+}
+
+/* Cabeçalho do modal */
 .leaderboard-sidebar-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     margin-bottom: 15px;
 }
-
 .leaderboard-sidebar-header h3 {
     color: #f1c40f;
     font-size: 1.05rem;
     letter-spacing: 1px;
 }
-
 .leaderboard-fechar-btn {
     background: none;
     border: none;
     color: #aaa;
-    font-size: 1.2rem;
+    font-size: 1.4rem;
     cursor: pointer;
-    padding: 2px 6px;
+    padding: 0 8px;
     border-radius: 4px;
     transition: color 0.15s;
 }
 .leaderboard-fechar-btn:hover { color: white; }
 
-/* Tabela — fonte menor para caber as 4 colunas sem cortar */
+/* Tabela */
 #tabela-leaderboard {
     width: 100%;
     border-collapse: collapse;
     color: white;
-    font-size: 0.82rem;
-    table-layout: fixed; /* colunas de largura igual, sem transbordar */
+    font-size: 0.85rem;
 }
-
 #tabela-leaderboard th, #tabela-leaderboard td {
-    padding: 10px 4px;
+    padding: 8px 4px;
     text-align: center;
     border-bottom: 1px solid #3c2929;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
 }
-
 #tabela-leaderboard th {
     background-color: rgb(79, 94, 120);
     color: white;
     font-weight: bold;
-    text-transform: uppercase;
     font-size: 0.75rem;
 }
-
-#tabela-leaderboard tbody tr:hover {
-    background-color: rgba(255, 255, 255, 0.05);
-}
-
-#tabela-leaderboard tbody td:nth-child(1) {
-    font-weight: bold;
-    color: #aaa;
-}
-
-/* Destaque do jogador atual */
 .linha-destaque {
     background-color: rgba(79, 94, 120, 0.35) !important;
     border: 1px solid rgb(79, 94, 120);
@@ -266,6 +256,19 @@ h1, h4 {
 .linha-destaque td {
     color: #f1c40f !important;
     font-weight: bold;
+}
+
+/* Scroll personalizado */
+.leaderboard-sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+.leaderboard-sidebar::-webkit-scrollbar-track {
+    background: #222;
+    border-radius: 8px;
+}
+.leaderboard-sidebar::-webkit-scrollbar-thumb {
+    background: #555;
+    border-radius: 8px;
 }
 
 /* --- ÁREA DE RESET --- */
