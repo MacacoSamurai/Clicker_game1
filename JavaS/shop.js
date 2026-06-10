@@ -36,7 +36,6 @@ async function executarCompraSegura(tipo, index) {
 
             atl();
             salvarNoNavegador();
-            mostrarAviso("Compra realizada com sucesso!", "sucesso");
         }
     } catch (err) {
         console.error("Falha na compra:", err);
