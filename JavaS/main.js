@@ -2,11 +2,18 @@
 function ocioso() {
     if (!estatisticas.nome) return;
 
-    let g = (estatisticas.auto * estatisticas.mul) / 10;
-    valorVisual += g;
-    totalVisual += g;
+    // Ganho idle deste tick (100ms = 1/10 de segundo)
+    const ganhoTick = (estatisticas.auto * estatisticas.mul) / 10;
 
-    if (cliquesAcumulados === 0 && !temporizadorClique) {
+    if (ganhoTick > 0) {
+        valorVisual        += ganhoTick;
+        totalVisual        += ganhoTick;
+        ganhoIdleAcumulado += ganhoTick;
+    }
+
+    // Enquanto não há nada pendente, deixa o visual convergir
+    // para o valor confirmado pelo servidor (ex.: outra aba aberta)
+    if (cliquesAcumulados === 0 && ganhoIdleAcumulado === 0) {
         if (estatisticas.val > valorVisual) {
             valorVisual += (estatisticas.val - valorVisual) * 0.2;
         }
@@ -16,10 +23,20 @@ function ocioso() {
     }
 
     contadorSave++;
+    contadorIdle++; // avança independente de cliques
+
+    // A cada 3 segundos (30 ticks × 100ms): persiste cliques no servidor
     if (contadorSave >= 30) {
         if (cliquesAcumulados > 0) enviarLoteAoServidor();
         contadorSave = 0;
     }
+
+    // A cada 3 segundos: persiste idle no servidor (nunca interrompido por cliques)
+    if (contadorIdle >= 30) {
+        if (ganhoIdleAcumulado > 0) enviarIdleAoServidor();
+        contadorIdle = 0;
+    }
+
     atl();
 }
 setInterval(ocioso, 100);
@@ -38,7 +55,8 @@ function din() {
     totalVisual += ganhoLocal;
 
     cliquesAcumulados++;
-    contadorSave = 0;
+    // contadorSave não é mais zerado aqui para não interferir no ciclo do idle
+    // o timer de 350ms abaixo já garante o envio rápido dos cliques
 
     if (estatisticas.inc > 1 || estatisticas.mul > 1) {
         estatisticas.verif = 1;
@@ -57,12 +75,12 @@ async function reset() {
 
     try {
         await supabaseClient.rpc('resetar_jogador', { p_user_id: estatisticas.userId });
-        
+
         localStorage.removeItem("save_clicker_game");
         mostrarAviso("Progresso resetado com sucesso!", "sucesso");
         setTimeout(() => location.reload(), 1500);
-    } catch (err) { 
-        console.error("Falha no reset:", err); 
+    } catch (err) {
+        console.error("Falha no reset:", err);
         mostrarAviso("Erro ao resetar no servidor.", "erro");
     }
 }

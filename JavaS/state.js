@@ -29,9 +29,11 @@ let estatisticas = {
     ]
 };
 
-let valorVisual = 0;
-let totalVisual = 0;
+let valorVisual          = 0;
+let totalVisual          = 0;
 let primeiroCarregamento = true;
-let cliquesAcumulados = 0;
-let temporizadorClique = null;
-let contadorSave = 0;
+let cliquesAcumulados    = 0;
+let ganhoIdleAcumulado   = 0;
+let temporizadorClique   = null;
+let contadorSave         = 0;
+let contadorIdle         = 0; 

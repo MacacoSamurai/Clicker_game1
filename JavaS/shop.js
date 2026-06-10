@@ -2,6 +2,11 @@
 async function executarCompraSegura(tipo, index) {
     if (!estatisticas.userId || !supabaseClient) return;
 
+    // Flush obrigatório antes de comprar:
+    // garante que o servidor tem o saldo atualizado (cliques + idle pendentes)
+    if (cliquesAcumulados > 0)  await enviarLoteAoServidor();
+    if (ganhoIdleAcumulado > 0) await enviarIdleAoServidor();
+
     try {
         const { data, error } = await supabaseClient.rpc('comprar_item', {
             p_user_id: estatisticas.userId,
@@ -19,6 +24,7 @@ async function executarCompraSegura(tipo, index) {
         if (data) {
             estatisticas.val = Number(data.novo_val);
             valorVisual = estatisticas.val;
+            totalVisual = Math.max(totalVisual, estatisticas.val);
 
             const campo = tipo === 'upgrade' ? 'inc' : tipo === 'auto' ? 'auto' : 'mul';
             estatisticas[campo] = Number(data.novo_val_num);
@@ -67,12 +73,16 @@ async function recuperarDadosDoServidor() {
             estatisticas.auto  = Number(data.auto);
             estatisticas.total = Number(data.total);
 
-            valorVisual = estatisticas.val;
-            totalVisual = estatisticas.total;
-
             if (data.upgrades) estatisticas.upgrades = data.upgrades;
             if (data.autos)    estatisticas.autos    = data.autos;
             if (data.multi)    estatisticas.multi    = data.multi;
+
+            // Só sobrescreve o visual se não há nada acumulado pendente,
+            // evitando descartar idle/cliques que ainda não foram enviados
+            if (ganhoIdleAcumulado === 0 && cliquesAcumulados === 0) {
+                valorVisual = estatisticas.val;
+                totalVisual = estatisticas.total;
+            }
 
             atl();
             salvarNoNavegador();
